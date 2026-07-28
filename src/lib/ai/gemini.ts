@@ -11,7 +11,7 @@ function getClient(): GoogleGenerativeAI {
   return client;
 }
 
-function getModel(modelName = "gemini-2.0-flash"): GenerativeModel {
+function getModel(modelName: string): GenerativeModel {
   return getClient().getGenerativeModel({ model: modelName });
 }
 
@@ -21,28 +21,42 @@ export interface GeminiRunResult {
   model: string;
 }
 
+const FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+
 export async function generateWithGemini(
   prompt: string,
   options?: { model?: string; systemInstruction?: string }
 ): Promise<GeminiRunResult> {
-  const modelName = options?.model ?? "gemini-2.0-flash";
-  const model = getModel(modelName);
+  const primaryModel = options?.model ?? process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+  const candidateModels = [primaryModel, ...FALLBACK_MODELS.filter((m) => m !== primaryModel)];
 
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    ...(options?.systemInstruction && {
-      systemInstruction: { role: "system", parts: [{ text: options.systemInstruction }] },
-    }),
-  });
+  let lastError: Error | null = null;
 
-  const response = result.response;
-  const text = response.text();
+  for (const modelName of candidateModels) {
+    try {
+      const model = getModel(modelName);
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        ...(options?.systemInstruction && {
+          systemInstruction: { role: "system", parts: [{ text: options.systemInstruction }] },
+        }),
+      });
 
-  return {
-    text,
-    tokenCount: response.usageMetadata?.totalTokenCount,
-    model: modelName,
-  };
+      const response = result.response;
+      const text = response.text();
+
+      return {
+        text,
+        tokenCount: response.usageMetadata?.totalTokenCount,
+        model: modelName,
+      };
+    } catch (err) {
+      console.warn(`Gemini model ${modelName} failed, attempting fallback...`, err);
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+
+  throw lastError ?? new Error("All Gemini model fallbacks failed");
 }
 
 export async function searchLeadsWithGemini(prompt: string): Promise<GeminiRunResult> {
