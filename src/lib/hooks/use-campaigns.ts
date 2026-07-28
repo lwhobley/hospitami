@@ -19,7 +19,7 @@ export interface CampaignDetail {
     id: string;
     name: string;
     status: string;
-    sequence: { id: string; name: string; steps: unknown[] } | null;
+    sequence: { id: string; name: string; steps: Array<{ order: number; subject?: string; body?: string }> } | null;
     sender: { id: string; email: string; name: string } | null;
     startedAt: string | null;
     completedAt: string | null;
@@ -48,14 +48,14 @@ export function useCampaigns(status?: string) {
   return useQuery<Campaign[]>({
     queryKey: ["campaigns", workspaceId, status],
     queryFn: async () => {
-      const params = new URLSearchParams({ workspaceId: workspaceId! });
+      const params = new URLSearchParams();
+      if (workspaceId) params.set("workspaceId", workspaceId);
       if (status) params.set("status", status);
-      const res = await fetch(`/api/campaigns?${params}`);
+      const res = await fetch(`/api/campaigns${params.toString() ? `?${params.toString()}` : ""}`);
       if (!res.ok) throw new Error("Failed to load campaigns");
-      const data = await res.json() as { campaigns: Campaign[] };
-      return data.campaigns;
+      const data = (await res.json()) as { campaigns: Campaign[] };
+      return data.campaigns ?? [];
     },
-    enabled: !!workspaceId,
   });
 }
 
@@ -65,12 +65,13 @@ export function useCampaign(id: string) {
   return useQuery<CampaignDetail>({
     queryKey: ["campaign", id, workspaceId],
     queryFn: async () => {
-      const params = new URLSearchParams({ workspaceId: workspaceId! });
-      const res = await fetch(`/api/campaigns/${id}?${params}`);
-      if (!res.ok) throw new Error("Failed to load campaign");
+      const params = new URLSearchParams();
+      if (workspaceId) params.set("workspaceId", workspaceId);
+      const res = await fetch(`/api/campaigns/${id}${params.toString() ? `?${params.toString()}` : ""}`);
+      if (!res.ok) throw new Error("Failed to load campaign detail");
       return res.json() as Promise<CampaignDetail>;
     },
-    enabled: !!workspaceId && !!id,
+    enabled: !!id,
   });
 }
 
@@ -85,7 +86,7 @@ export function useCreateCampaign() {
       senderAccountId?: string;
       leadIds?: string[];
     }) => {
-      const res = await fetch(`/api/campaigns?workspaceId=${workspaceId}`, {
+      const res = await fetch(`/api/campaigns${workspaceId ? `?workspaceId=${workspaceId}` : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, workspaceId }),
@@ -94,8 +95,8 @@ export function useCreateCampaign() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["campaigns", workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -106,7 +107,7 @@ export function useUpdateCampaignStatus() {
 
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await fetch(`/api/campaigns/${id}?workspaceId=${workspaceId}`, {
+      const res = await fetch(`/api/campaigns/${id}${workspaceId ? `?workspaceId=${workspaceId}` : ""}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -115,9 +116,9 @@ export function useUpdateCampaignStatus() {
       return res.json();
     },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["campaigns", workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign", id, workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }
@@ -129,15 +130,15 @@ export function useSendCampaign() {
   return useMutation({
     mutationFn: async (campaignId: string) => {
       const res = await fetch(
-        `/api/campaigns/${campaignId}/send?workspaceId=${workspaceId}`,
+        `/api/campaigns/${campaignId}/send${workspaceId ? `?workspaceId=${workspaceId}` : ""}`,
         { method: "POST" }
       );
       if (!res.ok) throw new Error("Failed to send campaign");
       return res.json();
     },
     onSuccess: (_, campaignId) => {
-      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId, workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ["campaigns", workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", campaignId] });
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
     },
   });
 }

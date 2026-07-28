@@ -22,14 +22,17 @@ import {
   MousePointerClick,
   MessageSquare,
   Pause,
+  Play,
   Settings,
   Sparkles,
-  Eye,
+  Loader2,
   CheckCircle2,
 } from "lucide-react";
 import Link from "next/link";
+import { useCampaign, useUpdateCampaignStatus, useSendCampaign } from "@/lib/hooks/use-campaigns";
 import { LinkedInComposer } from "@/components/linkedin/linkedin-composer";
 import { type LinkedInLead } from "@/lib/hooks/use-linkedin";
+import { toast } from "sonner";
 
 function LinkedInIcon({ className }: { className?: string }) {
   return (
@@ -39,77 +42,12 @@ function LinkedInIcon({ className }: { className?: string }) {
   );
 }
 
-const campaignStats = [
-  { label: "Total Sent", value: "245", icon: Send },
-  { label: "Opened", value: "98 (40%)", icon: Mail },
-  { label: "Clicked", value: "34 (14%)", icon: MousePointerClick },
-  { label: "Replied", value: "21 (8.6%)", icon: MessageSquare },
-];
-
-const campaignLeads = [
-  {
-    id: "cl-1",
-    name: "Underbelly Hospitality",
-    category: "Restaurant",
-    contact: "Chris Shepherd",
-    title: "Executive Chef & Founder",
-    email: "chris@underbellyhospitality.com",
-    step: 3,
-    status: "replied",
-    lastActivity: "2024-07-24",
-    draftSubject: "Helping Underbelly Hospitality elevate guest experiences",
-    draftBody: "Hi Chris,\n\nI noticed Underbelly Hospitality's recent expansion in Houston. Operating multiple venues creates complex event coordination across locations.\n\nOur platform helps fine dining groups streamline private events and drive repeat bookings.\n\nWould you be open to a 10-minute chat next Tuesday?\n\nBest,\nVenueWrangler Outreach",
-    warmSignals: ["Multi-location expansion", "James Beard Award Winner"],
-  },
-  {
-    id: "cl-2",
-    name: "Hotel Granduca Houston",
-    category: "Hotel",
-    contact: "Roberto Brancaccio",
-    title: "General Manager",
-    email: "rbrancaccio@granducahouston.com",
-    step: 2,
-    status: "opened",
-    lastActivity: "2024-07-25",
-    draftSubject: "Elevating corporate retreats at Hotel Granduca",
-    draftBody: "Hi Roberto,\n\nHotel Granduca's Italian villa aesthetic and luxury corporate retreat capabilities stand out in Houston.\n\nWe provide automated guest engagement tailored for 5-star hospitality brands.\n\nWould you be open to exploring how this fits your corporate event strategy?\n\nBest,\nVenueWrangler Outreach",
-    warmSignals: ["Luxury Positioning", "Veranda Event Space"],
-  },
-  {
-    id: "cl-3",
-    name: "The Astorian",
-    category: "Event Venue",
-    contact: "Jennifer Chen",
-    title: "Director of Events",
-    email: "events@theastorian.com",
-    step: 3,
-    status: "clicked",
-    lastActivity: "2024-07-23",
-    draftSubject: "Streamlining 200+ annual events at The Astorian",
-    draftBody: "Hi Jennifer,\n\nHosting 200+ events annually at The Astorian is impressive. Managing high-volume bookings often means manual follow-up drops through the cracks.\n\nOur tool automates post-inquiry follow-ups specifically for premier event venues.\n\nWorth a quick look this week?\n\nBest,\nVenueWrangler Outreach",
-    warmSignals: ["200+ Annual Events", "Industrial Chic Landmark"],
-  },
-  {
-    id: "cl-4",
-    name: "Brennan's of Houston",
-    category: "Restaurant",
-    contact: "Alex Brennan-Martin",
-    title: "Owner",
-    email: "info@brennanshouston.com",
-    step: 1,
-    status: "sent",
-    lastActivity: "2024-07-26",
-    draftSubject: "Private dining engagement for Brennan's of Houston",
-    draftBody: "Hi Alex,\n\nBrennan's Creole jazz brunch is a Houston institution. With private dining rooms for 300+ guests, driving private event bookings is key.\n\nWe'd love to share how modern engagement tools help iconic dining brands keep event calendars full.\n\nBest,\nVenueWrangler Outreach",
-    warmSignals: ["45+ Years Legacy", "300+ Capacity Private Dining"],
-  },
-];
-
 const leadStatusColors: Record<string, string> = {
-  sent: "bg-muted text-muted-foreground",
-  opened: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  pending: "bg-muted text-muted-foreground",
+  sent: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
+  opened: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   clicked: "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
-  replied: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
+  replied: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
 };
 
 export default function CampaignDetailPage({
@@ -118,34 +56,100 @@ export default function CampaignDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [selectedDraftLead, setSelectedDraftLead] = useState<(typeof campaignLeads)[0] | null>(null);
+  const { data, isLoading } = useCampaign(id);
+  const updateStatus = useUpdateCampaignStatus();
+  const sendCampaign = useSendCampaign();
+
   const [linkedInLead, setLinkedInLead] = useState<LinkedInLead | null>(null);
   const [linkedInOpen, setLinkedInOpen] = useState(false);
+
+  if (isLoading || !data) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const { campaign, stats, leads } = data;
+
+  const campaignStats = [
+    { label: "Total Leads", value: String(stats.total), icon: Users },
+    { label: "Emails Sent", value: String(stats.sent), icon: Send },
+    {
+      label: "Opened Rate",
+      value: stats.sent > 0 ? `${stats.opened} (${Math.round((stats.opened / stats.sent) * 100)}%)` : "0 (0%)",
+      icon: Mail,
+    },
+    {
+      label: "Reply Rate",
+      value: stats.sent > 0 ? `${stats.replied} (${Math.round((stats.replied / stats.sent) * 100)}%)` : "0 (0%)",
+      icon: MessageSquare,
+    },
+  ];
+
+  function handleToggleStatus() {
+    const nextStatus = campaign.status.toLowerCase() === "active" ? "PAUSED" : "ACTIVE";
+    updateStatus.mutate(
+      { id, status: nextStatus },
+      {
+        onSuccess: () => toast.success(`Campaign status updated to ${nextStatus}`),
+        onError: () => toast.error("Failed to update status"),
+      }
+    );
+  }
+
+  function handleExecuteSend() {
+    sendCampaign.mutate(id, {
+      onSuccess: () => toast.success("Outreach batch execution triggered"),
+      onError: (err) => toast.error(err.message || "Failed to trigger batch send"),
+    });
+  }
 
   return (
     <>
       <PageHeader
-        title="Q3 Houston Fine Dining"
-        description="Active campaign with 47 leads"
+        title={campaign.name}
+        description={`Status: ${campaign.status} • ${leads.length} prospect leads`}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" render={<Link href="/campaigns" />}>
               <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
               All Campaigns
             </Button>
-            <Button variant="outline" size="sm">
-              <Pause className="mr-1.5 h-3.5 w-3.5" />
-              Pause
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleStatus}
+              disabled={updateStatus.isPending}
+            >
+              {campaign.status.toLowerCase() === "active" ? (
+                <>
+                  <Pause className="mr-1.5 h-3.5 w-3.5" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <Play className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                  Activate
+                </>
+              )}
             </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="mr-1.5 h-3.5 w-3.5" />
-              Settings
+
+            <Button size="sm" onClick={handleExecuteSend} disabled={sendCampaign.isPending}>
+              {sendCampaign.isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Send Batch
             </Button>
           </div>
         }
       />
       <div className="flex-1 space-y-6 p-6">
-        {/* Campaign Stats */}
+        {/* Campaign Stats Bar */}
         <div className="grid gap-4 md:grid-cols-4">
           {campaignStats.map((stat) => (
             <Card key={stat.label}>
@@ -171,15 +175,15 @@ export default function CampaignDetailPage({
             <div className="grid gap-4 text-sm md:grid-cols-3">
               <div>
                 <p className="text-xs text-muted-foreground">Outreach Sequence</p>
-                <p className="font-medium">Fine Dining & Venue Outreach</p>
+                <p className="font-medium">{campaign.sequence?.name ?? "Default Hospitality Outreach"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Sending Email</p>
-                <p className="font-medium">outreach@venuewrangler.com</p>
+                <p className="font-medium">{campaign.sender?.email ?? "outreach@venuewrangler.com"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Channel Strategy</p>
-                <p className="font-medium">Email + LinkedIn Multi-channel</p>
+                <p className="font-medium">Email (SMTP) + LinkedIn Multi-channel</p>
               </div>
             </div>
           </CardContent>
@@ -190,159 +194,138 @@ export default function CampaignDetailPage({
           <TabsList>
             <TabsTrigger value="leads" className="text-xs">
               <Users className="mr-1.5 h-3.5 w-3.5" />
-              Campaign Leads ({campaignLeads.length})
+              Campaign Prospects ({leads.length})
             </TabsTrigger>
             <TabsTrigger value="drafts" className="text-xs">
               <Sparkles className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
-              Pre-Flight Draft Review
+              Pre-Flight Sequence Review
             </TabsTrigger>
           </TabsList>
 
-          {/* Leads Tab */}
+          {/* Prospects Tab */}
           <TabsContent value="leads">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Lead Progress & Execution</CardTitle>
+                <CardTitle className="text-sm font-semibold">Prospect Leads & Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Business</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead className="text-center">Step</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Activity</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {campaignLeads.map((lead) => (
-                      <TableRow key={lead.name}>
-                        <TableCell className="font-medium">
-                          <div>
-                            <p className="text-sm font-medium">{lead.name}</p>
-                            <Badge variant="outline" className="text-[10px]">
-                              {lead.category}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <div>
-                            <p className="font-medium">{lead.contact}</p>
-                            <p className="text-xs text-muted-foreground">{lead.title}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center text-sm">
-                          Step {lead.step}/3
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${leadStatusColors[lead.status]}`}
-                          >
-                            {lead.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {new Date(lead.lastActivity).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                setLinkedInLead({
-                                  contactName: lead.contact,
-                                  contactTitle: lead.title,
-                                  businessName: lead.name,
-                                  category: lead.category,
-                                  warmSignals: lead.warmSignals,
-                                });
-                                setLinkedInOpen(true);
-                              }}
-                            >
-                              <LinkedInIcon className="mr-1 h-3 w-3 text-[#0077B5]" />
-                              LinkedIn
-                            </Button>
-                          </div>
-                        </TableCell>
+                {leads.length === 0 ? (
+                  <div className="py-12 text-center text-sm text-muted-foreground">
+                    No leads added to this campaign yet. Add leads from the AI Lead Finder.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Business</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead className="text-center">Sequence Step</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Activity</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {leads.map((lead) => (
+                        <TableRow key={lead.id}>
+                          <TableCell className="font-medium">
+                            <p className="text-sm font-semibold">{lead.businessName}</p>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div>
+                              <p className="font-medium">{lead.contactName || "—"}</p>
+                              <p className="text-xs text-muted-foreground">{lead.contactTitle}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center text-sm">
+                            Step {lead.currentStep} / {lead.totalSteps || 3}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                                leadStatusColors[lead.status] ?? "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {lead.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(lead.lastActivity).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setLinkedInLead({
+                                    contactName: lead.contactName || lead.businessName,
+                                    contactTitle: lead.contactTitle,
+                                    businessName: lead.businessName,
+                                    category: "Hospitality",
+                                    warmSignals: [],
+                                  });
+                                  setLinkedInOpen(true);
+                                }}
+                              >
+                                <LinkedInIcon className="mr-1 h-3 w-3 text-[#0077B5]" />
+                                LinkedIn
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Pre-Flight Draft Review Tab */}
+          {/* Pre-Flight Sequence Review Tab */}
           <TabsContent value="drafts" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">AI Personalized Draft Previews</CardTitle>
+                <CardTitle className="text-sm font-semibold">Sequence Steps & Copy Preview</CardTitle>
                 <CardDescription className="text-xs">
-                  Inspect generated outreach email copy before sending batch messages.
+                  Inspect the email sequence steps configured for this campaign.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {campaignLeads.map((lead) => (
-                    <Card key={lead.id} className="border bg-muted/20">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-bold">{lead.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {lead.contact} ({lead.title})
+                {campaign.sequence?.steps && campaign.sequence.steps.length > 0 ? (
+                  <div className="space-y-4">
+                    {campaign.sequence.steps.map((step, i) => (
+                      <Card key={i} className="border bg-muted/20">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                              Step {step.order}: Email Outreach
                             </p>
+                            <Badge variant="secondary" className="text-[10px]">
+                              <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-600" />
+                              Ready
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="text-[10px]">
-                            <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-600" />
-                            Draft Ready
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-xs">
-                        <div className="rounded border bg-background p-2.5">
-                          <p className="font-semibold text-foreground">
-                            Subject: {lead.draftSubject}
-                          </p>
-                          <div className="mt-2 whitespace-pre-line text-muted-foreground">
-                            {lead.draftBody}
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-xs">
+                          <div className="rounded border bg-background p-3">
+                            <p className="font-semibold text-foreground">
+                              Subject: {step.subject || "No subject set"}
+                            </p>
+                            <div className="mt-2 whitespace-pre-line text-muted-foreground">
+                              {step.body || "No body text set"}
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center justify-between pt-1">
-                          <div className="flex flex-wrap gap-1">
-                            {lead.warmSignals.map((s) => (
-                              <Badge key={s} variant="outline" className="text-[10px]">
-                                {s}
-                              </Badge>
-                            ))}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              setLinkedInLead({
-                                contactName: lead.contact,
-                                contactTitle: lead.title,
-                                businessName: lead.name,
-                                category: lead.category,
-                                warmSignals: lead.warmSignals,
-                              });
-                              setLinkedInOpen(true);
-                            }}
-                          >
-                            <LinkedInIcon className="mr-1 h-3 w-3 text-[#0077B5]" />
-                            Open LinkedIn
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    No sequence steps found for this campaign.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
