@@ -2,15 +2,25 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { searchLeadsWithGemini } from "@/lib/ai/gemini";
 import { AiProvider, JobStatus, Prisma } from "@/generated/prisma/client";
+import { getWorkspaceContext } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { prompt, workspaceId } = body;
+    const body = await request.json().catch(() => ({}));
+    const { prompt, workspaceId: bodyWorkspaceId } = body;
 
-    if (!prompt || !workspaceId) {
+    const queryWorkspaceId = request.nextUrl.searchParams.get("workspaceId") ?? undefined;
+    const ctx = await getWorkspaceContext(queryWorkspaceId || bodyWorkspaceId);
+
+    if (!ctx) {
+      return NextResponse.json({ error: "Unauthorized or no active workspace" }, { status: 401 });
+    }
+
+    const workspaceId = ctx.workspace.id;
+
+    if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
       return NextResponse.json(
-        { error: "prompt and workspaceId are required" },
+        { error: "A valid search prompt is required" },
         { status: 400 }
       );
     }
@@ -31,7 +41,8 @@ export async function POST(request: NextRequest) {
 
     let leads: Record<string, unknown>[] = [];
     try {
-      leads = JSON.parse(result.text);
+      const text = result.text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+      leads = JSON.parse(text);
     } catch {
       await prisma.searchJob.update({
         where: { id: searchJob.id },

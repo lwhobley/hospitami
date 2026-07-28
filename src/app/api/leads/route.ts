@@ -1,15 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getWorkspaceContext } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
-  const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+  const queryWs = request.nextUrl.searchParams.get("workspaceId") ?? undefined;
+  const ctx = await getWorkspaceContext(queryWs);
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const workspaceId = ctx.workspace.id;
   const status = request.nextUrl.searchParams.get("status");
   const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "50");
   const offset = parseInt(request.nextUrl.searchParams.get("offset") ?? "0");
-
-  if (!workspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
-  }
 
   const leads = await prisma.lead.findMany({
     where: {
@@ -39,12 +40,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { workspaceId, leads: leadsData } = body;
+    const body = await request.json().catch(() => ({}));
+    const { workspaceId: bodyWs, leads: leadsData } = body;
 
-    if (!workspaceId || !leadsData || !Array.isArray(leadsData)) {
+    const queryWs = request.nextUrl.searchParams.get("workspaceId") ?? undefined;
+    const ctx = await getWorkspaceContext(queryWs || bodyWs);
+    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const workspaceId = ctx.workspace.id;
+
+    if (!leadsData || !Array.isArray(leadsData)) {
       return NextResponse.json(
-        { error: "workspaceId and leads array are required" },
+        { error: "leads array is required" },
         { status: 400 }
       );
     }
@@ -54,26 +61,33 @@ export async function POST(request: NextRequest) {
       const company = await prisma.company.create({
         data: {
           workspaceId,
-          name: leadData.businessName,
-          category: leadData.category,
-          subcategory: leadData.subcategory,
-          website: leadData.website,
-          city: leadData.city,
-          state: leadData.state,
-          hospitalitySegment: leadData.hospitalitySegment,
+          name: leadData.company?.name ?? leadData.businessName,
+          category: leadData.company?.category ?? leadData.category,
+          subcategory: leadData.company?.subcategory ?? leadData.subcategory,
+          website: leadData.company?.website ?? leadData.website,
+          city: leadData.company?.city ?? leadData.city,
+          state: leadData.company?.state ?? leadData.state,
+          description: leadData.company?.description ?? leadData.description,
         },
       });
 
       let contact = null;
-      if (leadData.contactName) {
+      const contactInfo = leadData.contact ?? (leadData.contactName ? {
+        name: leadData.contactName,
+        title: leadData.contactTitle,
+        email: leadData.contactEmail,
+        phone: leadData.contactPhone,
+      } : null);
+
+      if (contactInfo) {
         contact = await prisma.contact.create({
           data: {
             workspaceId,
             companyId: company.id,
-            name: leadData.contactName,
-            title: leadData.contactTitle,
-            email: leadData.contactEmail,
-            phone: leadData.contactPhone,
+            name: contactInfo.name,
+            title: contactInfo.title,
+            email: contactInfo.email,
+            phone: contactInfo.phone,
           },
         });
       }
@@ -90,19 +104,6 @@ export async function POST(request: NextRequest) {
           idealFor: leadData.idealFor,
         },
       });
-
-      if (leadData.sourceUrls) {
-        for (const url of leadData.sourceUrls) {
-          await prisma.leadSource.create({
-            data: {
-              leadId: lead.id,
-              provider: leadData.sourceProvider ?? "gemini-ai-search",
-              sourceUrl: url,
-              confidenceScore: leadData.confidence,
-            },
-          });
-        }
-      }
 
       created.push(lead);
     }
