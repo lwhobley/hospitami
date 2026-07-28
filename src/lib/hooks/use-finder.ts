@@ -55,41 +55,40 @@ export function useSaveLeads() {
   return useMutation({
     mutationFn: async (leads: DiscoveredLead[]) => {
       const payload = leads.map((l) => ({
-        company: {
-          name: l.businessName,
-          category: l.category,
-          subcategory: l.subcategory,
-          website: l.website,
-          phone: l.phone,
-          city: l.city,
-          state: l.state,
-          description: l.description,
-        },
-        contact: l.contactName
-          ? {
-              name: l.contactName,
-              title: l.contactTitle,
-              email: l.contactEmail,
-              linkedinUrl: l.linkedinUrl,
-            }
-          : undefined,
+        businessName: l.businessName,
+        category: l.category,
+        subcategory: l.subcategory,
+        website: l.website,
+        phone: l.phone,
+        city: l.city,
+        state: l.state,
+        description: l.description,
+        contactName: l.contactName,
+        contactTitle: l.contactTitle,
+        contactEmail: l.contactEmail,
+        linkedinUrl: l.linkedinUrl,
         warmSignals: l.warmSignals,
         qualificationScore: l.qualificationScore,
+        aiSummary: l.description,
+        personalizationAngle: l.reasoning,
         source: "gemini-ai-search",
         confidence: l.confidence ?? 0.7,
       }));
 
-      const res = await fetch(`/api/leads?workspaceId=${workspaceId}`, {
+      const res = await fetch(`/api/leads${workspaceId ? `?workspaceId=${workspaceId}` : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leads: payload, workspaceId }),
       });
-      if (!res.ok) throw new Error("Failed to save leads");
+      if (!res.ok) {
+        const errData = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errData.error ?? "Failed to save leads");
+      }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads", workspaceId] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

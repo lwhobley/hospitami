@@ -45,67 +45,83 @@ export async function POST(request: NextRequest) {
 
     const queryWs = request.nextUrl.searchParams.get("workspaceId") ?? undefined;
     const ctx = await getWorkspaceContext(queryWs || bodyWs);
-    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!ctx) return NextResponse.json({ error: "Unauthorized or no active workspace" }, { status: 401 });
 
     const workspaceId = ctx.workspace.id;
 
-    if (!leadsData || !Array.isArray(leadsData)) {
+    if (!leadsData || !Array.isArray(leadsData) || leadsData.length === 0) {
       return NextResponse.json(
-        { error: "leads array is required" },
+        { error: "leads array is required and cannot be empty" },
         { status: 400 }
       );
     }
 
     const created = [];
     for (const leadData of leadsData) {
-      const company = await prisma.company.create({
-        data: {
-          workspaceId,
-          name: leadData.company?.name ?? leadData.businessName,
-          category: leadData.company?.category ?? leadData.category,
-          subcategory: leadData.company?.subcategory ?? leadData.subcategory,
-          website: leadData.company?.website ?? leadData.website,
-          city: leadData.company?.city ?? leadData.city,
-          state: leadData.company?.state ?? leadData.state,
-          description: leadData.company?.description ?? leadData.description,
-        },
-      });
+      try {
+        const companyName =
+          leadData.company?.name || leadData.businessName || "Unknown Company";
+        const category = leadData.company?.category || leadData.category || "Hospitality";
+        const subcategory = leadData.company?.subcategory || leadData.subcategory;
+        const website = leadData.company?.website || leadData.website;
+        const city = leadData.company?.city || leadData.city;
+        const state = leadData.company?.state || leadData.state;
+        const description =
+          leadData.company?.description || leadData.description || leadData.aiSummary;
 
-      let contact = null;
-      const contactInfo = leadData.contact ?? (leadData.contactName ? {
-        name: leadData.contactName,
-        title: leadData.contactTitle,
-        email: leadData.contactEmail,
-        phone: leadData.contactPhone,
-      } : null);
+        const company = await prisma.company.create({
+          data: {
+            workspaceId,
+            name: companyName,
+            category,
+            subcategory: subcategory ?? null,
+            website: website ?? null,
+            city: city ?? null,
+            state: state ?? null,
+            description: description ?? null,
+          },
+        });
 
-      if (contactInfo) {
-        contact = await prisma.contact.create({
+        let contact = null;
+        const contactInfo = leadData.contact ?? (leadData.contactName ? {
+          name: leadData.contactName,
+          title: leadData.contactTitle,
+          email: leadData.contactEmail,
+          phone: leadData.contactPhone,
+          linkedinUrl: leadData.linkedinUrl,
+        } : null);
+
+        if (contactInfo && contactInfo.name) {
+          contact = await prisma.contact.create({
+            data: {
+              workspaceId,
+              companyId: company.id,
+              name: contactInfo.name,
+              title: contactInfo.title ?? null,
+              email: contactInfo.email ?? null,
+              phone: contactInfo.phone ?? null,
+              linkedinUrl: contactInfo.linkedinUrl ?? null,
+            },
+          });
+        }
+
+        const lead = await prisma.lead.create({
           data: {
             workspaceId,
             companyId: company.id,
-            name: contactInfo.name,
-            title: contactInfo.title,
-            email: contactInfo.email,
-            phone: contactInfo.phone,
+            contactId: contact?.id ?? null,
+            qualificationScore: leadData.qualificationScore ?? 85,
+            warmSignals: leadData.warmSignals ? leadData.warmSignals : [],
+            aiSummary: leadData.aiSummary || description || null,
+            personalizationAngle: leadData.personalizationAngle || leadData.reasoning || null,
+            idealFor: leadData.idealFor ?? null,
           },
         });
+
+        created.push(lead);
+      } catch (itemErr) {
+        console.error("Failed to create lead item:", itemErr);
       }
-
-      const lead = await prisma.lead.create({
-        data: {
-          workspaceId,
-          companyId: company.id,
-          contactId: contact?.id,
-          qualificationScore: leadData.qualificationScore,
-          warmSignals: leadData.warmSignals,
-          aiSummary: leadData.aiSummary,
-          personalizationAngle: leadData.personalizationAngle,
-          idealFor: leadData.idealFor,
-        },
-      });
-
-      created.push(lead);
     }
 
     return NextResponse.json({ created: created.length, leads: created });
