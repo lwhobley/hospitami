@@ -1,5 +1,14 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Hospitami AI - Independent Project Guidelines
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This project is an independent B2B AI sales outreach platform for the hospitality industry.
+It is built as a standalone Next.js 16 App Router application with Tailwind CSS v4, Prisma 7, PostgreSQL (Supabase), and Supabase Auth.
+
+- **Stack**: Next.js 16, TypeScript (strict), Tailwind CSS v4, Prisma 7, Supabase Auth & PostgreSQL, Google Gemini API, Moonshot Kimi API, Nodemailer (SMTP), ImapFlow (IMAP).
+- **Standalone Repository**: [lwhobley/hospitami](https://github.com/lwhobley/hospitami)
+- **Zero External Monorepo Dependencies**: Do not reference `packages/api`, NestJS, Expo, or `venueflow-app`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+# Next.js App Router Rules
+
+Follow Next.js 16 App Router conventions. Place API routes in `src/app/api/` and UI components in `src/components/`.
 <!-- END:nextjs-agent-rules -->
