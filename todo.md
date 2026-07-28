@@ -41,7 +41,8 @@
 
 ## Phase 3 - Email Infrastructure
 
-- [ ] Resend integration for email delivery
+- [x] SMTP outbound email delivery integration (Nodemailer)
+- [x] IMAP inbound email reply sync integration (ImapFlow)
 - [ ] Sender account verification flow (SPF, DKIM, DMARC)
 - [ ] Email sending queue with rate limiting
 - [ ] Open/click tracking pixel implementation

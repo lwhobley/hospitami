@@ -17,7 +17,7 @@ Hospitami AI is a B2B SaaS platform for AI-powered hospitality sales outreach. I
 | Auth | Supabase Auth with SSR (`@supabase/ssr`) |
 | AI - Search/Enrichment | Google Gemini API |
 | AI - Outreach Copy | Kimi (Moonshot) API |
-| Email Delivery | Resend |
+| Email Delivery | SMTP & IMAP (Nodemailer + ImapFlow) |
 | Client State | React Query (TanStack Query) |
 | Analytics | PostHog |
 

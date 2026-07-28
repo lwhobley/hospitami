@@ -36,7 +36,7 @@ export async function POST(
     ? thread.subject
     : `Re: ${thread.subject}`;
 
-  // Send via Resend
+  // Send via SMTP
   await sendEmail({
     from: sender.email,
     fromName: sender.name,
@@ -44,6 +44,13 @@ export async function POST(
     subject: replySubject,
     html: body.body.replace(/\n/g, "<br>"),
     text: body.body,
+    smtpConfig: {
+      host: sender.smtpHost ?? undefined,
+      port: sender.smtpPort ?? undefined,
+      user: sender.smtpUser ?? undefined,
+      pass: sender.smtpPass ?? undefined,
+      secure: sender.smtpSecure ?? undefined,
+    },
   });
 
   // Record the outbound message

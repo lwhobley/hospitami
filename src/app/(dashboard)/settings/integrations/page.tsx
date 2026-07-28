@@ -23,8 +23,8 @@ const integrations = [
     category: "AI",
   },
   {
-    name: "Resend",
-    description: "Email delivery and sending infrastructure",
+    name: "SMTP & IMAP",
+    description: "Custom mail server sending and reply syncing",
     icon: Mail,
     status: "connected" as const,
     category: "Email",
