@@ -56,15 +56,28 @@ export async function generateOutreach(
     category: string;
     warmSignals: string[];
     personalizationAngle: string;
+    productContext?: {
+      productName: string;
+      valueProposition: string;
+      keyCapabilities?: string[];
+    };
   },
   options?: { tone?: string; length?: "short" | "medium" | "long" }
 ): Promise<{ subject: string; body: string }> {
   const tone = options?.tone ?? "professional and warm";
   const length = options?.length ?? "medium";
 
-  const prompt = `Write a personalized cold outreach email for a hospitality technology platform.
+  const productDetails = leadContext.productContext
+    ? `Product Pitching: ${leadContext.productContext.productName}
+Value Proposition: ${leadContext.productContext.valueProposition}
+Key Capabilities: ${leadContext.productContext.keyCapabilities?.join(", ") ?? ""}`
+    : "Product: Hospitality technology platform that streamlines venue operations and guest engagement";
 
-Target:
+  const prompt = `Write a personalized cold outreach email pitching our product to a hospitality prospect.
+
+${productDetails}
+
+Target Prospect:
 - Business: ${leadContext.businessName}
 - Contact: ${leadContext.contactName}, ${leadContext.contactTitle}
 - Category: ${leadContext.category}
@@ -75,13 +88,13 @@ Requirements:
 - Tone: ${tone}
 - Length: ${length}
 - Include a compelling subject line
-- Reference specific warm signals
+- Reference specific warm signals and link them directly to our product's value proposition
 - Natural personalization, not templated
 - Clear but soft CTA
 
 Return JSON: { "subject": "...", "body": "..." }`;
 
-  const raw = await callKimi(prompt, "You are an expert B2B sales copywriter for hospitality technology.");
+  const raw = await callKimi(prompt, "You are an expert B2B sales copywriter pitching hospitality technology.");
   return parseEmailJson(raw);
 }
 

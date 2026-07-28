@@ -95,3 +95,31 @@ Return ONLY JSON, no markdown fencing.`;
     systemInstruction: "You are a business intelligence researcher for the hospitality industry.",
   });
 }
+
+export async function analyzeWebsiteWithGemini(urlOrText: string): Promise<GeminiRunResult> {
+  const systemInstruction = `You are a strategic B2B sales intelligence AI.
+Analyze the provided website URL or product description and extract its core product positioning, key features, and ideal customer target outreach groups in the hospitality sector.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "productName": "string",
+  "oneLiner": "string (short 1-sentence value pitch)",
+  "valueProposition": "string (2-3 sentences detailing core problem solved)",
+  "keyCapabilities": ["string (key feature 1)", "string (key feature 2)", "string (key feature 3)"],
+  "targetOutreachGroups": [
+    {
+      "id": "group_1",
+      "name": "string (e.g., Independent Fine Dining Groups)",
+      "description": "string (why this group is an ideal fit)",
+      "targetTitles": ["string (e.g. Director of Operations, Executive Chef)"],
+      "companyCriteria": "string (e.g. Upscale US restaurants with 2+ locations and private dining)",
+      "recommendedPrompt": "string (natural language prompt to search for this target group)"
+    }
+  ]
+}
+
+Ensure you generate 3-4 distinct, realistic target outreach groups. Return ONLY JSON without markdown fencing.`;
+
+  const prompt = `Analyze this product / website: ${urlOrText}`;
+  return generateWithGemini(prompt, { systemInstruction });
+}

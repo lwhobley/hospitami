@@ -13,6 +13,7 @@ import {
   BarChart3,
   Settings,
   Zap,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ import {
 
 const mainNav = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "AI Autopilot", href: "/autopilot", icon: Sparkles },
   { title: "AI Finder", href: "/finder", icon: Search },
   { title: "Lead Lists", href: "/lists", icon: ListChecks },
   { title: "Sequences", href: "/sequences", icon: Workflow },
