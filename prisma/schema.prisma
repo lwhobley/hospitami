@@ -1,0 +1,608 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  REP
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  NURTURING
+  CONVERTED
+  LOST
+  ARCHIVED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum SequenceStepType {
+  EMAIL
+  WAIT
+  CONDITION
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum SenderStatus {
+  ACTIVE
+  WARMING
+  PAUSED
+  DISABLED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AiProvider {
+  GEMINI
+  KIMI
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  workspaceMembers WorkspaceMember[]
+  activities       Activity[]
+  notes            Note[]
+  aiRuns           AiRun[]
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  workspaces Workspace[]
+
+  @@map("organizations")
+}
+
+model Workspace {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String
+  organizationId String   @map("organization_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members         WorkspaceMember[]
+  companies       Company[]
+  contacts        Contact[]
+  leads           Lead[]
+  lists           LeadList[]
+  savedSearches   SavedSearch[]
+  campaigns       Campaign[]
+  sequences       Sequence[]
+  senderAccounts  SenderAccount[]
+  senderDomains   SenderDomain[]
+  inboxThreads    InboxThread[]
+  tags            Tag[]
+  aiRuns          AiRun[]
+  enrichmentJobs  EnrichmentJob[]
+  searchJobs      SearchJob[]
+  auditLogs       AuditLog[]
+  analyticsEvents AnalyticsEvent[]
+  messageTemplates MessageTemplate[]
+
+  @@unique([organizationId, slug])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  workspaceId String   @map("workspace_id")
+  role        Role     @default(REP)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("workspace_members")
+}
+
+model Company {
+  id                 String   @id @default(cuid())
+  workspaceId        String   @map("workspace_id")
+  name               String
+  category           String?
+  subcategory        String?
+  website            String?
+  linkedinUrl        String?  @map("linkedin_url")
+  city               String?
+  state              String?
+  country            String?
+  locationCount      Int?     @map("location_count")
+  hospitalitySegment String?  @map("hospitality_segment")
+  phone              String?
+  description        String?
+  enrichmentData     Json?    @map("enrichment_data")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts  Contact[]
+  leads     Lead[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, name])
+  @@map("companies")
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  workspaceId    String   @map("workspace_id")
+  companyId      String?  @map("company_id")
+  name           String
+  title          String?
+  email          String?
+  phone          String?
+  linkedinUrl    String?  @map("linkedin_url")
+  enrichmentData Json?    @map("enrichment_data")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  leads     Lead[]
+
+  @@index([workspaceId])
+  @@index([email])
+  @@map("contacts")
+}
+
+model Lead {
+  id                   String     @id @default(cuid())
+  workspaceId          String     @map("workspace_id")
+  companyId            String?    @map("company_id")
+  contactId            String?    @map("contact_id")
+  status               LeadStatus @default(NEW)
+  qualificationScore   Int?       @map("qualification_score")
+  warmSignals          Json?      @map("warm_signals")
+  aiSummary            String?    @map("ai_summary")
+  personalizationAngle String?    @map("personalization_angle")
+  idealFor             String?    @map("ideal_for")
+  ownerId              String?    @map("owner_id")
+  lastActivityAt       DateTime?  @map("last_activity_at")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company       Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact       Contact?        @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  sources       LeadSource[]
+  listMembers   ListMember[]
+  campaignLeads CampaignLead[]
+  notes         Note[]
+  activities    Activity[]
+  tags          TagAssignment[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([qualificationScore])
+  @@map("leads")
+}
+
+model LeadSource {
+  id              String   @id @default(cuid())
+  leadId          String   @map("lead_id")
+  provider        String
+  sourceUrl       String?  @map("source_url")
+  confidenceScore Float?   @map("confidence_score")
+  reasoning       String?
+  rawData         Json?    @map("raw_data")
+  retrievedAt     DateTime @default(now()) @map("retrieved_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("lead_sources")
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  prompt      String
+  filters     Json?
+  resultCount Int?     @map("result_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("saved_searches")
+}
+
+model LeadList {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  description String?
+  color       String?
+  isSmartList Boolean  @default(false) @map("is_smart_list")
+  smartFilter Json?    @map("smart_filter")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   ListMember[]
+
+  @@index([workspaceId])
+  @@map("lead_lists")
+}
+
+model ListMember {
+  id      String   @id @default(cuid())
+  listId  String   @map("list_id")
+  leadId  String   @map("lead_id")
+  addedAt DateTime @default(now()) @map("added_at")
+
+  list LeadList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  lead Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, leadId])
+  @@map("list_members")
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  workspaceId     String         @map("workspace_id")
+  name            String
+  status          CampaignStatus @default(DRAFT)
+  sequenceId      String?        @map("sequence_id")
+  senderAccountId String?        @map("sender_account_id")
+  scheduledAt     DateTime?      @map("scheduled_at")
+  startedAt       DateTime?      @map("started_at")
+  completedAt     DateTime?      @map("completed_at")
+  settings        Json?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sequence      Sequence?      @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+  senderAccount SenderAccount? @relation(fields: [senderAccountId], references: [id], onDelete: SetNull)
+  leads         CampaignLead[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("campaigns")
+}
+
+model CampaignLead {
+  id          String    @id @default(cuid())
+  campaignId  String    @map("campaign_id")
+  leadId      String    @map("lead_id")
+  currentStep Int       @default(0) @map("current_step")
+  status      String    @default("pending")
+  sentAt      DateTime? @map("sent_at")
+  openedAt    DateTime? @map("opened_at")
+  clickedAt   DateTime? @map("clicked_at")
+  repliedAt   DateTime? @map("replied_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, leadId])
+  @@map("campaign_leads")
+}
+
+model Sequence {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  steps     SequenceStep[]
+  campaigns Campaign[]
+
+  @@index([workspaceId])
+  @@map("sequences")
+}
+
+model SequenceStep {
+  id         String           @id @default(cuid())
+  sequenceId String           @map("sequence_id")
+  order      Int
+  type       SequenceStepType @default(EMAIL)
+  subject    String?
+  body       String?
+  waitDays   Int?             @map("wait_days")
+  variants   Json?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  sequence Sequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@index([sequenceId])
+  @@map("sequence_steps")
+}
+
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  subject     String?
+  body        String
+  variables   Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("message_templates")
+}
+
+model SenderAccount {
+  id          String       @id @default(cuid())
+  workspaceId String       @map("workspace_id")
+  email       String
+  name        String
+  provider    String       @default("resend")
+  status      SenderStatus @default(ACTIVE)
+  dailyLimit  Int          @default(50) @map("daily_limit")
+  sentToday   Int          @default(0) @map("sent_today")
+  warmupDay   Int          @default(0) @map("warmup_day")
+  settings    Json?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@index([workspaceId])
+  @@map("sender_accounts")
+}
+
+model SenderDomain {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  domain      String
+  verified    Boolean  @default(false)
+  dkimRecord  String?  @map("dkim_record")
+  spfRecord   String?  @map("spf_record")
+  dmarcRecord String?  @map("dmarc_record")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("sender_domains")
+}
+
+model InboxThread {
+  id            String   @id @default(cuid())
+  workspaceId   String   @map("workspace_id")
+  subject       String
+  contactEmail  String   @map("contact_email")
+  contactName   String?  @map("contact_name")
+  campaignId    String?  @map("campaign_id")
+  isRead        Boolean  @default(false) @map("is_read")
+  isStarred     Boolean  @default(false) @map("is_starred")
+  isArchived    Boolean  @default(false) @map("is_archived")
+  lastMessageAt DateTime @map("last_message_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages  InboxMessage[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, isRead])
+  @@map("inbox_threads")
+}
+
+model InboxMessage {
+  id        String           @id @default(cuid())
+  threadId  String           @map("thread_id")
+  direction MessageDirection
+  fromEmail String           @map("from_email")
+  fromName  String?          @map("from_name")
+  toEmail   String           @map("to_email")
+  subject   String?
+  body      String
+  htmlBody  String?          @map("html_body")
+  sentAt    DateTime         @map("sent_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  thread InboxThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@map("inbox_messages")
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  color       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignments TagAssignment[]
+
+  @@unique([workspaceId, name])
+  @@map("tags")
+}
+
+model TagAssignment {
+  id     String @id @default(cuid())
+  tagId  String @map("tag_id")
+  leadId String @map("lead_id")
+
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, leadId])
+  @@map("tag_assignments")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  leadId    String   @map("lead_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("notes")
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  leadId    String?  @map("lead_id")
+  userId    String?  @map("user_id")
+  type      String
+  title     String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@map("activities")
+}
+
+model AiRun {
+  id           String     @id @default(cuid())
+  workspaceId  String     @map("workspace_id")
+  userId       String?    @map("user_id")
+  provider     AiProvider
+  model        String
+  purpose      String
+  prompt       String
+  rawResponse  Json?      @map("raw_response")
+  parsedOutput Json?      @map("parsed_output")
+  tokenCount   Int?       @map("token_count")
+  costUsd      Float?     @map("cost_usd")
+  status       JobStatus  @default(PENDING)
+  durationMs   Int?       @map("duration_ms")
+  error        String?
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([provider])
+  @@map("ai_runs")
+}
+
+model EnrichmentJob {
+  id          String    @id @default(cuid())
+  workspaceId String    @map("workspace_id")
+  leadIds     String[]  @map("lead_ids")
+  providers   String[]
+  status      JobStatus @default(PENDING)
+  results     Json?
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("enrichment_jobs")
+}
+
+model SearchJob {
+  id          String    @id @default(cuid())
+  workspaceId String    @map("workspace_id")
+  prompt      String
+  providers   String[]
+  status      JobStatus @default(PENDING)
+  resultCount Int?      @map("result_count")
+  results     Json?
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("search_jobs")
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  eventType   String   @map("event_type")
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, eventType])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  userId      String?  @map("user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id")
+  changes     Json?
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
