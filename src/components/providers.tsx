@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { WorkspaceProvider } from "@/lib/workspace-context";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -18,10 +19,12 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SidebarProvider>{children}</SidebarProvider>
-      </TooltipProvider>
-      <Toaster />
+      <WorkspaceProvider>
+        <TooltipProvider>
+          <SidebarProvider>{children}</SidebarProvider>
+        </TooltipProvider>
+        <Toaster />
+      </WorkspaceProvider>
     </QueryClientProvider>
   );
 }

@@ -35,6 +35,12 @@ import {
   ChevronUp,
   Clock,
 } from "lucide-react";
+import {
+  useSearchLeads,
+  useSaveLeads,
+  type DiscoveredLead,
+} from "@/lib/hooks/use-finder";
+import { toast } from "sonner";
 
 interface LeadResult {
   id: string;
@@ -216,25 +222,59 @@ const examplePrompts = [
 
 export default function FinderPage() {
   const [prompt, setPrompt] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<LeadResult[]>([]);
+  const [apiResults, setApiResults] = useState<DiscoveredLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("score");
 
-  async function handleSearch() {
+  const searchLeads = useSearchLeads();
+  const saveLeads = useSaveLeads();
+
+  const isSearching = searchLeads.isPending;
+
+  // Map DiscoveredLead to the local LeadResult shape for the UI
+  const results: LeadResult[] = apiResults.map((l, i) => ({
+    id: String(i),
+    businessName: l.businessName,
+    category: l.category,
+    subcategory: l.subcategory,
+    city: l.city,
+    state: l.state,
+    website: l.website,
+    contactName: l.contactName,
+    contactTitle: l.contactTitle,
+    contactEmail: l.contactEmail,
+    qualificationScore: l.qualificationScore ?? 0,
+    warmSignals: l.warmSignals ?? [],
+    aiSummary: l.description ?? "",
+    personalizationAngle: l.reasoning,
+  }));
+
+  function handleSearch() {
     if (!prompt.trim()) return;
-    setIsSearching(true);
-    setResults([]);
+    setApiResults([]);
     setSelectedIds(new Set());
     setHasSearched(true);
+    searchLeads.mutate(
+      { prompt },
+      {
+        onSuccess: (data) => setApiResults(data.leads),
+        onError: (err) => toast.error(err.message ?? "Search failed"),
+      }
+    );
+  }
 
-    // Simulate AI search (in production, calls /api/finder)
-    await new Promise((r) => setTimeout(r, 2500));
-    setResults(sampleResults);
-    setIsSearching(false);
+  function handleSaveSelected() {
+    const toSave = apiResults.filter((_, i) => selectedIds.has(String(i)));
+    saveLeads.mutate(toSave, {
+      onSuccess: () => {
+        toast.success(`Saved ${toSave.length} lead${toSave.length !== 1 ? "s" : ""}`);
+        setSelectedIds(new Set());
+      },
+      onError: () => toast.error("Failed to save leads"),
+    });
   }
 
   function toggleSelect(id: string) {
@@ -412,9 +452,14 @@ export default function FinderPage() {
                   <span className="text-xs text-muted-foreground">
                     {selectedIds.size} selected
                   </span>
-                  <Button size="sm" variant="default">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={handleSaveSelected}
+                    disabled={saveLeads.isPending}
+                  >
                     <ListPlus className="mr-1.5 h-3.5 w-3.5" />
-                    Save to List
+                    {saveLeads.isPending ? "Saving..." : "Save to List"}
                   </Button>
                 </div>
               )}
@@ -606,7 +651,18 @@ export default function FinderPage() {
                                 </div>
                               </div>
                               <div className="mt-3 flex gap-2">
-                                <Button size="sm" variant="default">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  disabled={saveLeads.isPending}
+                                  onClick={() => {
+                                    const src = apiResults[Number(lead.id)];
+                                    if (src) saveLeads.mutate([src], {
+                                      onSuccess: () => toast.success("Lead saved"),
+                                      onError: () => toast.error("Failed to save lead"),
+                                    });
+                                  }}
+                                >
                                   <Save className="mr-1.5 h-3.5 w-3.5" />
                                   Save Lead
                                 </Button>

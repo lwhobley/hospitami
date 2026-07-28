@@ -15,179 +15,49 @@ import {
   Archive,
   Sparkles,
   Send,
-  Reply,
-  ChevronRight,
 } from "lucide-react";
-
-interface Thread {
-  id: string;
-  subject: string;
-  contactName: string;
-  contactEmail: string;
-  campaign?: string;
-  isRead: boolean;
-  isStarred: boolean;
-  lastMessage: string;
-  lastMessageAt: string;
-  messageCount: number;
-  messages: {
-    id: string;
-    direction: "inbound" | "outbound";
-    fromName: string;
-    fromEmail: string;
-    body: string;
-    sentAt: string;
-  }[];
-}
-
-const sampleThreads: Thread[] = [
-  {
-    id: "1",
-    subject: "Re: Helping Underbelly Hospitality elevate guest experiences",
-    contactName: "Chris Shepherd",
-    contactEmail: "chris@underbellyhospitality.com",
-    campaign: "Q3 Houston Fine Dining",
-    isRead: false,
-    isStarred: true,
-    lastMessage:
-      "Thanks for reaching out! We've been looking into better tools for our events. Can you share more about what you offer?",
-    lastMessageAt: "2024-07-26T14:30:00Z",
-    messageCount: 3,
-    messages: [
-      {
-        id: "m1",
-        direction: "outbound",
-        fromName: "Sarah Mitchell",
-        fromEmail: "sarah@hospitami.com",
-        body: "Hi Chris, I noticed Underbelly Hospitality's growing event programming and multi-location expansion. I wanted to reach out because we help hospitality groups like yours streamline guest engagement and event sales.\n\nWould you be open to a quick chat about how we could help?",
-        sentAt: "2024-07-20T09:00:00Z",
-      },
-      {
-        id: "m2",
-        direction: "outbound",
-        fromName: "Sarah Mitchell",
-        fromEmail: "sarah@hospitami.com",
-        body: "Hi Chris, wanted to follow up on my previous note. I've been working with similar restaurant groups and thought you might find this case study interesting - a James Beard-recognized group saw a 40% increase in event bookings after implementing a modern engagement platform.",
-        sentAt: "2024-07-23T10:00:00Z",
-      },
-      {
-        id: "m3",
-        direction: "inbound",
-        fromName: "Chris Shepherd",
-        fromEmail: "chris@underbellyhospitality.com",
-        body: "Thanks for reaching out! We've been looking into better tools for our events. Can you share more about what you offer? We're particularly interested in managing private dining and event inquiries across our locations.",
-        sentAt: "2024-07-26T14:30:00Z",
-      },
-    ],
-  },
-  {
-    id: "2",
-    subject: "Re: Streamlining event bookings at Hotel Granduca Houston",
-    contactName: "Roberto Brancaccio",
-    contactEmail: "rbrancaccio@granducahouston.com",
-    campaign: "Boutique Hotels - TX",
-    isRead: false,
-    isStarred: false,
-    lastMessage:
-      "We're about to start our annual planning. Can we schedule a call next week?",
-    lastMessageAt: "2024-07-25T16:45:00Z",
-    messageCount: 2,
-    messages: [
-      {
-        id: "m4",
-        direction: "outbound",
-        fromName: "Mike Thompson",
-        fromEmail: "mike@hospitami.com",
-        body: "Hi Roberto, I noticed Hotel Granduca's beautiful event spaces and wedding packages. Having worked with similar boutique hotels, I thought you might be interested in how we help hotels streamline their event inquiry-to-booking pipeline.",
-        sentAt: "2024-07-22T09:30:00Z",
-      },
-      {
-        id: "m5",
-        direction: "inbound",
-        fromName: "Roberto Brancaccio",
-        fromEmail: "rbrancaccio@granducahouston.com",
-        body: "We're about to start our annual planning. Can we schedule a call next week? I'm free Tuesday or Wednesday afternoon.",
-        sentAt: "2024-07-25T16:45:00Z",
-      },
-    ],
-  },
-  {
-    id: "3",
-    subject: "Re: Guest engagement for The Astorian",
-    contactName: "Jennifer Chen",
-    contactEmail: "events@theastorian.com",
-    campaign: "Event Venues Outreach",
-    isRead: true,
-    isStarred: false,
-    lastMessage:
-      "Interesting approach. We currently use a mix of spreadsheets and email. Send me some info?",
-    lastMessageAt: "2024-07-24T11:20:00Z",
-    messageCount: 2,
-    messages: [
-      {
-        id: "m6",
-        direction: "outbound",
-        fromName: "Sarah Mitchell",
-        fromEmail: "sarah@hospitami.com",
-        body: "Hi Jennifer, with The Astorian hosting 200+ events annually, I imagine managing follow-up and guest engagement at scale is a real challenge. We've been helping event venues streamline this process - would love to share some ideas.",
-        sentAt: "2024-07-21T10:15:00Z",
-      },
-      {
-        id: "m7",
-        direction: "inbound",
-        fromName: "Jennifer Chen",
-        fromEmail: "events@theastorian.com",
-        body: "Interesting approach. We currently use a mix of spreadsheets and email for event management. We've been looking to modernize. Send me some info?",
-        sentAt: "2024-07-24T11:20:00Z",
-      },
-    ],
-  },
-  {
-    id: "4",
-    subject: "Re: One more thought for Brennan's of Houston",
-    contactName: "Alex Brennan-Martin",
-    contactEmail: "info@brennanshouston.com",
-    campaign: "Q3 Houston Fine Dining",
-    isRead: true,
-    isStarred: false,
-    lastMessage: "Not interested at this time, but thanks for thinking of us.",
-    lastMessageAt: "2024-07-23T09:00:00Z",
-    messageCount: 4,
-    messages: [
-      {
-        id: "m8",
-        direction: "outbound",
-        fromName: "Sarah Mitchell",
-        fromEmail: "sarah@hospitami.com",
-        body: "Hi Alex, I noticed Brennan's incredible 45-year legacy and extensive private dining capabilities.",
-        sentAt: "2024-07-15T09:00:00Z",
-      },
-      {
-        id: "m9",
-        direction: "inbound",
-        fromName: "Alex Brennan-Martin",
-        fromEmail: "info@brennanshouston.com",
-        body: "Not interested at this time, but thanks for thinking of us.",
-        sentAt: "2024-07-23T09:00:00Z",
-      },
-    ],
-  },
-];
+import { useInbox, useSendReply, type InboxThread } from "@/lib/hooks/use-inbox";
+import { useSenders } from "@/lib/hooks/use-senders";
+import { toast } from "sonner";
 
 export default function InboxPage() {
-  const [selectedThread, setSelectedThread] = useState<Thread | null>(
-    sampleThreads[0]
-  );
+  const { data: threads = [], isLoading } = useInbox();
+  const { data: senderData } = useSenders();
+  const sendReply = useSendReply();
+
+  const [selectedThread, setSelectedThread] = useState<InboxThread | null>(null);
   const [search, setSearch] = useState("");
   const [replyText, setReplyText] = useState("");
 
-  const filtered = sampleThreads.filter(
+  const selectedFull =
+    threads.find((t) => t.id === selectedThread?.id) ?? selectedThread;
+
+  const filtered = threads.filter(
     (t) =>
       t.subject.toLowerCase().includes(search.toLowerCase()) ||
-      t.contactName.toLowerCase().includes(search.toLowerCase())
+      (t.contactName ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const unreadCount = sampleThreads.filter((t) => !t.isRead).length;
+  const unreadCount = threads.filter((t) => !t.isRead).length;
+
+  function handleSend() {
+    if (!selectedFull || !replyText.trim()) return;
+    const accountId = senderData?.accounts[0]?.id;
+    if (!accountId) {
+      toast.error("No sender account configured");
+      return;
+    }
+    sendReply.mutate(
+      { threadId: selectedFull.id, body: replyText, senderAccountId: accountId },
+      {
+        onSuccess: () => {
+          setReplyText("");
+          toast.success("Reply sent");
+        },
+        onError: () => toast.error("Failed to send reply"),
+      }
+    );
+  }
 
   return (
     <>
@@ -210,8 +80,14 @@ export default function InboxPage() {
             </div>
           </div>
           <ScrollArea className="h-[calc(100vh-8.5rem)]">
-            {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4">
+            {isLoading ? (
+              <div className="space-y-px p-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-20 animate-pulse rounded bg-muted" />
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center px-4 py-16">
                 <Inbox className="mb-3 h-6 w-6 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">No conversations</p>
               </div>
@@ -222,14 +98,14 @@ export default function InboxPage() {
                     key={thread.id}
                     onClick={() => setSelectedThread(thread)}
                     className={`w-full p-3 text-left transition-colors hover:bg-muted/50 ${
-                      selectedThread?.id === thread.id ? "bg-muted" : ""
+                      selectedFull?.id === thread.id ? "bg-muted" : ""
                     } ${!thread.isRead ? "bg-primary/[0.02]" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p
-                        className={`text-sm truncate ${!thread.isRead ? "font-semibold" : "font-medium"}`}
+                        className={`truncate text-sm ${!thread.isRead ? "font-semibold" : "font-medium"}`}
                       >
-                        {thread.contactName}
+                        {thread.contactName ?? thread.contactEmail}
                       </p>
                       <span className="shrink-0 text-[10px] text-muted-foreground">
                         {new Date(thread.lastMessageAt).toLocaleDateString(undefined, {
@@ -238,18 +114,10 @@ export default function InboxPage() {
                         })}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground truncate">
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
                       {thread.subject}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                      {thread.lastMessage}
-                    </p>
                     <div className="mt-1.5 flex items-center gap-2">
-                      {thread.campaign && (
-                        <Badge variant="outline" className="text-[9px]">
-                          {thread.campaign}
-                        </Badge>
-                      )}
                       {!thread.isRead && (
                         <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                       )}
@@ -262,19 +130,19 @@ export default function InboxPage() {
         </div>
 
         {/* Thread Detail */}
-        {selectedThread ? (
+        {selectedFull ? (
           <div className="flex flex-1 flex-col">
             <div className="border-b px-6 py-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold">{selectedThread.subject}</h2>
+                  <h2 className="text-sm font-semibold">{selectedFull.subject}</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {selectedThread.contactName} &lt;{selectedThread.contactEmail}&gt;
+                    {selectedFull.contactName} &lt;{selectedFull.contactEmail}&gt;
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button variant="ghost" size="sm">
-                    {selectedThread.isStarred ? (
+                    {selectedFull.isStarred ? (
                       <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                     ) : (
                       <StarOff className="h-4 w-4" />
@@ -289,18 +157,20 @@ export default function InboxPage() {
 
             <ScrollArea className="flex-1 px-6 py-4">
               <div className="space-y-4">
-                {selectedThread.messages.map((msg) => (
+                {selectedFull.messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={`rounded-lg border p-4 ${
-                      msg.direction === "inbound"
-                        ? "bg-muted/50 ml-0 mr-12"
-                        : "bg-background ml-12 mr-0"
+                      msg.direction === "INBOUND"
+                        ? "ml-0 mr-12 bg-muted/50"
+                        : "ml-12 mr-0 bg-background"
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
                       <div>
-                        <span className="text-xs font-medium">{msg.fromName}</span>
+                        <span className="text-xs font-medium">
+                          {msg.fromName ?? msg.fromEmail}
+                        </span>
                         <span className="ml-1.5 text-[10px] text-muted-foreground">
                           &lt;{msg.fromEmail}&gt;
                         </span>
@@ -314,15 +184,12 @@ export default function InboxPage() {
                         })}
                       </span>
                     </div>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {msg.body}
-                    </p>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.body}</p>
                   </div>
                 ))}
               </div>
             </ScrollArea>
 
-            {/* Reply */}
             <div className="border-t p-4">
               <div className="space-y-3">
                 <Textarea
@@ -332,13 +199,17 @@ export default function InboxPage() {
                   onChange={(e) => setReplyText(e.target.value)}
                 />
                 <div className="flex items-center justify-between">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" disabled>
                     <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                     AI Draft
                   </Button>
-                  <Button size="sm" disabled={!replyText.trim()}>
+                  <Button
+                    size="sm"
+                    disabled={!replyText.trim() || sendReply.isPending}
+                    onClick={handleSend}
+                  >
                     <Send className="mr-1.5 h-3.5 w-3.5" />
-                    Send Reply
+                    {sendReply.isPending ? "Sending..." : "Send Reply"}
                   </Button>
                 </div>
               </div>

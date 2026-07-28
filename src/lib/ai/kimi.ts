@@ -38,6 +38,16 @@ async function callKimi(
   };
 }
 
+function parseEmailJson(raw: KimiRunResult): { subject: string; body: string } {
+  try {
+    const text = raw.text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(text) as { subject?: string; body?: string };
+    return { subject: parsed.subject ?? "", body: parsed.body ?? "" };
+  } catch {
+    return { subject: "", body: raw.text };
+  }
+}
+
 export async function generateOutreach(
   leadContext: {
     businessName: string;
@@ -48,7 +58,7 @@ export async function generateOutreach(
     personalizationAngle: string;
   },
   options?: { tone?: string; length?: "short" | "medium" | "long" }
-): Promise<KimiRunResult> {
+): Promise<{ subject: string; body: string }> {
   const tone = options?.tone ?? "professional and warm";
   const length = options?.length ?? "medium";
 
@@ -71,14 +81,15 @@ Requirements:
 
 Return JSON: { "subject": "...", "body": "..." }`;
 
-  return callKimi(prompt, "You are an expert B2B sales copywriter for hospitality technology.");
+  const raw = await callKimi(prompt, "You are an expert B2B sales copywriter for hospitality technology.");
+  return parseEmailJson(raw);
 }
 
 export async function generateFollowUp(
   originalEmail: { subject: string; body: string },
   stepNumber: number,
   context: { businessName: string; contactName: string }
-): Promise<KimiRunResult> {
+): Promise<{ subject: string; body: string }> {
   const prompt = `Write follow-up email #${stepNumber} for this outreach thread.
 
 Original email subject: ${originalEmail.subject}
@@ -94,13 +105,14 @@ The follow-up should:
 
 Return JSON: { "subject": "...", "body": "..." }`;
 
-  return callKimi(prompt, "You are an expert B2B sales copywriter. Write concise, non-pushy follow-ups.");
+  const raw = await callKimi(prompt, "You are an expert B2B sales copywriter. Write concise, non-pushy follow-ups.");
+  return parseEmailJson(raw);
 }
 
 export async function generateReplyDraft(
   thread: { subject: string; messages: { direction: string; body: string }[] },
   intent: string
-): Promise<KimiRunResult> {
+): Promise<{ body: string }> {
   const conversation = thread.messages
     .map((m) => `${m.direction === "INBOUND" ? "Them" : "Us"}: ${m.body}`)
     .join("\n\n");
@@ -115,5 +127,12 @@ Intent: ${intent}
 
 Write a natural, professional reply. Return JSON: { "body": "..." }`;
 
-  return callKimi(prompt, "You are an expert sales communicator.");
+  const raw = await callKimi(prompt, "You are an expert sales communicator.");
+  try {
+    const text = raw.text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(text) as { body?: string };
+    return { body: parsed.body ?? raw.text };
+  } catch {
+    return { body: raw.text };
+  }
 }

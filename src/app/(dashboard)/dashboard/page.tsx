@@ -1,3 +1,5 @@
+"use client";
+
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -18,53 +20,26 @@ import {
   Target,
   Mail,
 } from "lucide-react";
-
-const stats = [
-  { label: "Total Leads", value: "1,247", change: "+12%", icon: Users },
-  { label: "Active Campaigns", value: "8", change: "+3", icon: Send },
-  { label: "Open Rate", value: "34.2%", change: "+2.1%", icon: Mail },
-  { label: "Reply Rate", value: "8.7%", change: "+0.9%", icon: TrendingUp },
-];
-
-const recentLeads = [
-  {
-    name: "The Capital Grille",
-    category: "Restaurant",
-    city: "Houston, TX",
-    score: 92,
-    status: "New",
-  },
-  {
-    name: "Hotel Granduca",
-    category: "Hotel",
-    city: "Houston, TX",
-    score: 88,
-    status: "Contacted",
-  },
-  {
-    name: "The Astorian",
-    category: "Event Venue",
-    city: "Houston, TX",
-    score: 85,
-    status: "New",
-  },
-  {
-    name: "Brennan's of Houston",
-    category: "Restaurant",
-    city: "Houston, TX",
-    score: 81,
-    status: "Qualified",
-  },
-  {
-    name: "The Houstonian",
-    category: "Hotel",
-    city: "Houston, TX",
-    score: 79,
-    status: "New",
-  },
-];
+import { useDashboard } from "@/lib/hooks/use-dashboard";
 
 export default function DashboardPage() {
+  const { data, isLoading } = useDashboard();
+
+  const stats = [
+    { label: "Total Leads", value: data?.stats.totalLeads ?? "—", icon: Users },
+    { label: "Active Campaigns", value: data?.stats.activeCampaigns ?? "—", icon: Send },
+    {
+      label: "Open Rate",
+      value: data?.stats.openRate != null ? `${data.stats.openRate.toFixed(1)}%` : "—",
+      icon: Mail,
+    },
+    {
+      label: "Reply Rate",
+      value: data?.stats.replyRate != null ? `${data.stats.replyRate.toFixed(1)}%` : "—",
+      icon: TrendingUp,
+    },
+  ];
+
   return (
     <>
       <PageHeader
@@ -72,8 +47,8 @@ export default function DashboardPage() {
         description="Overview of your outreach activity"
         actions={
           <Button size="sm" render={<Link href="/finder" />}>
-              <Search className="mr-1.5 h-3.5 w-3.5" />
-              Find Leads
+            <Search className="mr-1.5 h-3.5 w-3.5" />
+            Find Leads
           </Button>
         }
       />
@@ -88,8 +63,13 @@ export default function DashboardPage() {
                 <stat.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-emerald-600">{stat.change} from last month</p>
+                <div className="text-2xl font-bold">
+                  {isLoading ? (
+                    <span className="inline-block h-7 w-16 animate-pulse rounded bg-muted" />
+                  ) : (
+                    stat.value
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -104,48 +84,54 @@ export default function DashboardPage() {
                   <CardDescription>Latest leads from AI discovery</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" render={<Link href="/lists" />}>
-                    View all
-                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  View all
+                  <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentLeads.map((lead) => (
-                  <div
-                    key={lead.name}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                        <Target className="h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{lead.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {lead.category} &middot; {lead.city}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">{lead.score}</p>
-                        <p className="text-[10px] text-muted-foreground">Score</p>
-                      </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          lead.status === "New"
-                            ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
-                            : lead.status === "Contacted"
-                              ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-                              : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                        }`}
+                {isLoading
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-14 animate-pulse rounded-md bg-muted" />
+                    ))
+                  : (data?.recentLeads ?? []).map((lead) => (
+                      <div
+                        key={lead.id}
+                        className="flex items-center justify-between rounded-md border p-3"
                       >
-                        {lead.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                            <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{lead.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {lead.category} &middot; {lead.city}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {lead.score != null && (
+                            <div className="text-right">
+                              <p className="text-sm font-semibold">{lead.score}</p>
+                              <p className="text-[10px] text-muted-foreground">Score</p>
+                            </div>
+                          )}
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                              lead.status === "new"
+                                ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                                : lead.status === "contacted"
+                                  ? "bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                  : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                            }`}
+                          >
+                            {lead.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
               </div>
             </CardContent>
           </Card>
@@ -158,77 +144,64 @@ export default function DashboardPage() {
                   <CardDescription>Active campaign metrics</CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" render={<Link href="/analytics" />}>
-                    Details
-                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                  Details
+                  <ArrowRight className="ml-1 h-3.5 w-3.5" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {[
-                  {
-                    name: "Q3 Houston Fine Dining",
-                    sent: 245,
-                    opened: 98,
-                    replied: 21,
-                    status: "Active",
-                  },
-                  {
-                    name: "Boutique Hotels - TX",
-                    sent: 180,
-                    opened: 72,
-                    replied: 15,
-                    status: "Active",
-                  },
-                  {
-                    name: "Event Venues Outreach",
-                    sent: 320,
-                    opened: 134,
-                    replied: 28,
-                    status: "Active",
-                  },
-                  {
-                    name: "Catering Companies",
-                    sent: 150,
-                    opened: 45,
-                    replied: 8,
-                    status: "Paused",
-                  },
-                ].map((campaign) => (
-                  <div key={campaign.name} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{campaign.name}</p>
-                      <span
-                        className={`text-[10px] font-medium ${
-                          campaign.status === "Active"
-                            ? "text-emerald-600"
-                            : "text-muted-foreground"
-                        }`}
-                      >
-                        {campaign.status}
-                      </span>
-                    </div>
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span>Sent: {campaign.sent}</span>
-                      <span>
-                        Opened: {campaign.opened} (
-                        {Math.round((campaign.opened / campaign.sent) * 100)}%)
-                      </span>
-                      <span>
-                        Replied: {campaign.replied} (
-                        {Math.round((campaign.replied / campaign.sent) * 100)}%)
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-muted">
-                      <div
-                        className="h-1.5 rounded-full bg-primary"
-                        style={{
-                          width: `${Math.round((campaign.opened / campaign.sent) * 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+                {isLoading
+                  ? Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="h-10 animate-pulse rounded bg-muted" />
+                    ))
+                  : (data?.campaignPerformance ?? []).map((campaign) => (
+                      <div key={campaign.id} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{campaign.name}</p>
+                          <span
+                            className={`text-[10px] font-medium capitalize ${
+                              campaign.status === "active"
+                                ? "text-emerald-600"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {campaign.status}
+                          </span>
+                        </div>
+                        <div className="flex gap-4 text-xs text-muted-foreground">
+                          <span>Sent: {campaign.sent}</span>
+                          <span>
+                            Opened: {campaign.opened}
+                            {campaign.sent > 0 && (
+                              <span>
+                                {" "}
+                                ({Math.round((campaign.opened / campaign.sent) * 100)}%)
+                              </span>
+                            )}
+                          </span>
+                          <span>
+                            Replied: {campaign.replied}
+                            {campaign.sent > 0 && (
+                              <span>
+                                {" "}
+                                ({Math.round((campaign.replied / campaign.sent) * 100)}%)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {campaign.sent > 0 && (
+                          <div className="h-1.5 w-full rounded-full bg-muted">
+                            <div
+                              className="h-1.5 rounded-full bg-primary"
+                              style={{
+                                width: `${Math.round((campaign.opened / campaign.sent) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
               </div>
             </CardContent>
           </Card>
