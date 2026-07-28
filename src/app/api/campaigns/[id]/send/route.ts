@@ -107,6 +107,13 @@ export async function POST(
           unsubscribe_url: buildUnsubscribeUrl(cl.id),
         },
         campaignLeadId: cl.id,
+        smtpConfig: {
+          host: sender.smtpHost ?? undefined,
+          port: sender.smtpPort ?? undefined,
+          user: sender.smtpUser ?? undefined,
+          pass: sender.smtpPass ?? undefined,
+          secure: sender.smtpSecure ?? undefined,
+        },
       });
 
       // Update campaign lead record

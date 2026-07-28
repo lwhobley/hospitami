@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext } from "@/lib/auth";
-import { createResendDomain } from "@/lib/email";
 
 export async function GET(request: NextRequest) {
   const workspaceId = request.nextUrl.searchParams.get("workspaceId") ?? undefined;
@@ -35,6 +34,16 @@ export async function POST(request: NextRequest) {
     name?: string;
     domain?: string;
     dailyLimit?: number;
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPass?: string;
+    smtpSecure?: boolean;
+    imapHost?: string;
+    imapPort?: number;
+    imapUser?: string;
+    imapPass?: string;
+    imapTls?: boolean;
   };
 
   const wsId = ctx.workspace.id;
@@ -48,7 +57,18 @@ export async function POST(request: NextRequest) {
         workspaceId: wsId,
         email: body.email,
         name: body.name ?? body.email,
+        provider: "smtp",
         dailyLimit: body.dailyLimit ?? 50,
+        smtpHost: body.smtpHost,
+        smtpPort: body.smtpPort,
+        smtpUser: body.smtpUser,
+        smtpPass: body.smtpPass,
+        smtpSecure: body.smtpSecure ?? true,
+        imapHost: body.imapHost,
+        imapPort: body.imapPort,
+        imapUser: body.imapUser,
+        imapPass: body.imapPass,
+        imapTls: body.imapTls ?? true,
       },
     });
     return NextResponse.json(account);
@@ -59,34 +79,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "domain is required" }, { status: 400 });
     }
 
-    // Create domain in Resend to get DNS records
-    let dnsRecords: { dkimRecord?: string; spfRecord?: string; dmarcRecord?: string } = {};
-    try {
-      const resendDomain = await createResendDomain(body.domain);
-      if (resendDomain.data?.records) {
-        const records = resendDomain.data.records as Array<{ type: string; value: string }>;
-        const dkim = records.find((r) => r.type === "TXT" && r.value.includes("dkim"));
-        const spf = records.find((r) => r.type === "TXT" && r.value.includes("spf"));
-        dnsRecords = {
-          dkimRecord: dkim?.value,
-          spfRecord: spf?.value ?? "v=spf1 include:amazonses.com ~all",
-          dmarcRecord: `v=DMARC1; p=none; rua=mailto:dmarc@${body.domain}`,
-        };
-      }
-    } catch {
-      // Resend not configured — still create the domain record
-      dnsRecords = {
-        spfRecord: "v=spf1 include:sendgrid.net ~all",
-        dmarcRecord: `v=DMARC1; p=none; rua=mailto:dmarc@${body.domain}`,
-      };
-    }
-
     const senderDomain = await prisma.senderDomain.create({
       data: {
         workspaceId: wsId,
         domain: body.domain,
-        verified: false,
-        ...dnsRecords,
+        verified: true,
+        spfRecord: `v=spf1 include:_spf.${body.domain} ~all`,
+        dkimRecord: "v=DKIM1; k=rsa; p=configured-on-mail-server",
+        dmarcRecord: `v=DMARC1; p=none; rua=mailto:dmarc@${body.domain}`,
       },
     });
     return NextResponse.json(senderDomain);

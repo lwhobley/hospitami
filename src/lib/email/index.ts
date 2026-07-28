@@ -1,13 +1,14 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { renderTemplate, type TemplateVariables } from "./templates";
 import { generateTrackingToken } from "./tracking";
 
-let _resend: Resend | null = null;
-function getResend(): Resend {
-  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY ?? "placeholder");
-  return _resend;
+export interface SmtpConfig {
+  host?: string;
+  port?: number;
+  user?: string;
+  pass?: string;
+  secure?: boolean;
 }
-export const resend = { get emails() { return getResend().emails; }, get domains() { return getResend().domains; } } as unknown as Resend;
 
 export interface SendEmailOptions {
   from: string;
@@ -18,6 +19,7 @@ export interface SendEmailOptions {
   text?: string;
   campaignLeadId?: string;
   trackClicks?: boolean;
+  smtpConfig?: SmtpConfig;
 }
 
 export interface SendTemplateOptions {
@@ -28,6 +30,31 @@ export interface SendTemplateOptions {
   bodyTemplate: string;
   variables: TemplateVariables;
   campaignLeadId?: string;
+  smtpConfig?: SmtpConfig;
+}
+
+export function createTransporter(customConfig?: SmtpConfig) {
+  const host = customConfig?.host || process.env.SMTP_HOST;
+  const port = customConfig?.port || Number(process.env.SMTP_PORT ?? 587);
+  const user = customConfig?.user || process.env.SMTP_USER;
+  const pass = customConfig?.pass || process.env.SMTP_PASS;
+  const secure = customConfig?.secure ?? (port === 465);
+
+  if (!host || !user || !pass) {
+    throw new Error(
+      "SMTP configuration incomplete. Please configure SMTP_HOST, SMTP_USER, and SMTP_PASS in .env or on your Sender Account."
+    );
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: {
+      user,
+      pass,
+    },
+  });
 }
 
 export async function sendEmail(opts: SendEmailOptions) {
@@ -40,10 +67,12 @@ export async function sendEmail(opts: SendEmailOptions) {
   }
 
   const fromAddress = opts.fromName
-    ? `${opts.fromName} <${opts.from}>`
+    ? `"${opts.fromName}" <${opts.from}>`
     : opts.from;
 
-  const result = await resend.emails.send({
+  const transporter = createTransporter(opts.smtpConfig);
+
+  const info = await transporter.sendMail({
     from: fromAddress,
     to: opts.to,
     subject: opts.subject,
@@ -51,7 +80,7 @@ export async function sendEmail(opts: SendEmailOptions) {
     text: opts.text,
   });
 
-  return result;
+  return info;
 }
 
 export async function sendTemplate(opts: SendTemplateOptions) {
@@ -65,17 +94,6 @@ export async function sendTemplate(opts: SendTemplateOptions) {
     subject,
     html: bodyHtml,
     campaignLeadId: opts.campaignLeadId,
+    smtpConfig: opts.smtpConfig,
   });
-}
-
-export async function createResendDomain(domain: string) {
-  return resend.domains.create({ name: domain });
-}
-
-export async function verifyResendDomain(resendDomainId: string) {
-  return resend.domains.verify(resendDomainId);
-}
-
-export async function getResendDomain(resendDomainId: string) {
-  return resend.domains.get(resendDomainId);
 }

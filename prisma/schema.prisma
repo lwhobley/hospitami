@@ -380,11 +380,27 @@ model SenderAccount {
   workspaceId String       @map("workspace_id")
   email       String
   name        String
-  provider    String       @default("resend")
+  provider    String       @default("smtp")
   status      SenderStatus @default(ACTIVE)
   dailyLimit  Int          @default(50) @map("daily_limit")
   sentToday   Int          @default(0) @map("sent_today")
   warmupDay   Int          @default(0) @map("warmup_day")
+  
+  // SMTP fields
+  smtpHost    String?      @map("smtp_host")
+  smtpPort    Int?         @map("smtp_port")
+  smtpUser    String?      @map("smtp_user")
+  smtpPass    String?      @map("smtp_pass")
+  smtpSecure  Boolean      @default(true) @map("smtp_secure")
+
+  // IMAP fields
+  imapHost    String?      @map("imap_host")
+  imapPort    Int?         @map("imap_port")
+  imapUser    String?      @map("imap_user")
+  imapPass    String?      @map("imap_pass")
+  imapTls     Boolean      @default(true) @map("imap_tls")
+  lastSyncedAt DateTime?   @map("last_synced_at")
+
   settings    Json?
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")

@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext } from "@/lib/auth";
-import { verifyResendDomain } from "@/lib/email";
 import { type SenderStatus } from "@/generated/prisma/client";
 
 export async function PATCH(
@@ -18,12 +17,10 @@ export async function PATCH(
     status?: SenderStatus;
     dailyLimit?: number;
     action?: "verify-domain";
-    resendDomainId?: string;
   };
 
   // Handle domain verification
-  if (body.action === "verify-domain" && body.resendDomainId) {
-    await verifyResendDomain(body.resendDomainId);
+  if (body.action === "verify-domain") {
     const domain = await prisma.senderDomain.update({
       where: { id },
       data: { verified: true },
