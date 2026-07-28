@@ -29,6 +29,7 @@ export interface ListDetail {
     contactName: string;
     contactTitle: string;
     contactEmail: string;
+    linkedinUrl: string | null;
     city: string;
     state: string;
     score: number;

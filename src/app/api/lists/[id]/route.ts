@@ -38,6 +38,7 @@ export async function GET(
     contactName: m.lead.contact?.name ?? "",
     contactTitle: m.lead.contact?.title ?? "",
     contactEmail: m.lead.contact?.email ?? "",
+    linkedinUrl: m.lead.contact?.linkedinUrl ?? null,
     city: m.lead.company?.city ?? "",
     state: m.lead.company?.state ?? "",
     score: m.lead.qualificationScore ?? 0,

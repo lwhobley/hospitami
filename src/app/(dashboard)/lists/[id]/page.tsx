@@ -1,11 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -25,80 +26,21 @@ import {
   Send,
   Search,
   Download,
-  Sparkles,
   ArrowLeft,
   Filter,
 } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
 
-const sampleLeads = [
-  {
-    id: "1",
-    businessName: "Underbelly Hospitality",
-    category: "Restaurant",
-    contactName: "Chris Shepherd",
-    contactTitle: "Executive Chef & Founder",
-    contactEmail: "chris@underbellyhospitality.com",
-    city: "Houston",
-    state: "TX",
-    score: 94,
-    status: "New" as const,
-    warmSignals: ["Multi-location expansion", "Active event programming"],
-  },
-  {
-    id: "2",
-    businessName: "Hotel Granduca Houston",
-    category: "Hotel",
-    contactName: "Roberto Brancaccio",
-    contactTitle: "General Manager",
-    contactEmail: "rbrancaccio@granducahouston.com",
-    city: "Houston",
-    state: "TX",
-    score: 91,
-    status: "Contacted" as const,
-    warmSignals: ["Active wedding/event venue", "Recently renovated"],
-  },
-  {
-    id: "3",
-    businessName: "The Astorian",
-    category: "Event Venue",
-    contactName: "Jennifer Chen",
-    contactTitle: "Director of Events",
-    contactEmail: "events@theastorian.com",
-    city: "Houston",
-    state: "TX",
-    score: 88,
-    status: "New" as const,
-    warmSignals: ["High-volume event bookings", "Corporate and social events"],
-  },
-  {
-    id: "4",
-    businessName: "Brennan's of Houston",
-    category: "Restaurant",
-    contactName: "Alex Brennan-Martin",
-    contactTitle: "Owner",
-    contactEmail: "info@brennanshouston.com",
-    city: "Houston",
-    state: "TX",
-    score: 86,
-    status: "Qualified" as const,
-    warmSignals: ["Private dining for 300+", "Corporate event packages"],
-  },
-  {
-    id: "5",
-    businessName: "The Houstonian Hotel",
-    category: "Hotel",
-    contactName: "Mark Lindsey",
-    contactTitle: "VP of Sales & Marketing",
-    contactEmail: "mlindsey@houstonian.com",
-    city: "Houston",
-    state: "TX",
-    score: 90,
-    status: "New" as const,
-    warmSignals: ["Multiple event spaces", "Club membership model"],
-  },
-];
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+    </svg>
+  );
+}
+import Link from "next/link";
+import { useList } from "@/lib/hooks/use-lists";
+import { LinkedInComposer } from "@/components/linkedin/linkedin-composer";
+import { type LinkedInLead } from "@/lib/hooks/use-linkedin";
 
 const statusColors: Record<string, string> = {
   New: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
@@ -113,11 +55,17 @@ export default function ListDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { data, isLoading } = useList(id);
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [linkedInLead, setLinkedInLead] = useState<LinkedInLead | null>(null);
+  const [linkedInOpen, setLinkedInOpen] = useState(false);
 
-  const filtered = sampleLeads
+  const leads = data?.leads ?? [];
+
+  const filtered = leads
     .filter(
       (l) =>
         l.businessName.toLowerCase().includes(search.toLowerCase()) ||
@@ -125,25 +73,38 @@ export default function ListDetailPage({
     )
     .filter((l) => filterStatus === "all" || l.status === filterStatus);
 
-  function toggleSelect(id: string) {
+  function toggleSelect(leadId: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(leadId)) next.delete(leadId);
+      else next.add(leadId);
       return next;
     });
+  }
+
+  function openLinkedIn(lead: typeof leads[number]) {
+    setLinkedInLead({
+      leadId: lead.id,
+      businessName: lead.businessName,
+      contactName: lead.contactName,
+      contactTitle: lead.contactTitle,
+      category: lead.category,
+      warmSignals: lead.warmSignals,
+      linkedinUrl: lead.linkedinUrl ?? undefined,
+    });
+    setLinkedInOpen(true);
   }
 
   return (
     <>
       <PageHeader
-        title="Houston Fine Dining"
-        description={`${sampleLeads.length} leads`}
+        title={isLoading ? "Loading…" : (data?.list.name ?? "List")}
+        description={isLoading ? "" : `${data?.list.leadCount ?? 0} leads`}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" render={<Link href="/lists" />}>
-                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                All Lists
+              <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+              All Lists
             </Button>
             {selectedIds.size > 0 && (
               <Button size="sm">
@@ -208,69 +169,95 @@ export default function ListDetailPage({
                 <TableHead className="text-center">Score</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Signals</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((lead) => (
-                <TableRow key={lead.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.has(lead.id)}
-                      onCheckedChange={() => toggleSelect(lead.id)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <p className="text-sm font-medium">{lead.businessName}</p>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{lead.contactName}</p>
-                      <p className="text-xs text-muted-foreground">{lead.contactTitle}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-[10px]">
-                      {lead.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {lead.city}, {lead.state}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span
-                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                        lead.score >= 90
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                          : lead.score >= 80
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                      }`}
-                    >
-                      {lead.score}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[lead.status] ?? ""}`}
-                    >
-                      {lead.status}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {lead.warmSignals.map((s) => (
-                        <Badge key={s} variant="outline" className="text-[10px] font-normal">
-                          {s}
+              {isLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={9}>
+                        <Skeleton className="h-8 w-full" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                : filtered.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(lead.id)}
+                          onCheckedChange={() => toggleSelect(lead.id)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm font-medium">{lead.businessName}</p>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm">{lead.contactName}</p>
+                          <p className="text-xs text-muted-foreground">{lead.contactTitle}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {lead.category}
                         </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {lead.city}, {lead.state}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                            lead.score >= 90
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              : lead.score >= 80
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                          }`}
+                        >
+                          {lead.score}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColors[lead.status] ?? ""}`}
+                        >
+                          {lead.status}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {lead.warmSignals.map((s) => (
+                            <Badge key={s} variant="outline" className="text-[10px] font-normal">
+                              {s}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-[#0077B5] hover:bg-[#0077B5]/10"
+                          title="LinkedIn Outreach"
+                          onClick={() => openLinkedIn(lead)}
+                        >
+                          <LinkedInIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
             </TableBody>
           </Table>
         </div>
       </div>
+
+      <LinkedInComposer
+        lead={linkedInLead}
+        open={linkedInOpen}
+        onOpenChange={setLinkedInOpen}
+      />
     </>
   );
 }
