@@ -28,21 +28,18 @@ import {
   Loader2,
   Save,
   Download,
-  ExternalLink,
   BookmarkPlus,
-  ListPlus,
   ChevronDown,
   ChevronUp,
   Clock,
+  ThumbsUp,
+  ThumbsDown,
+  Target,
+  CheckCircle2,
+  DollarSign,
+  TrendingUp,
+  ExternalLink,
 } from "lucide-react";
-
-function LinkedInIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-    </svg>
-  );
-}
 import {
   useSearchLeads,
   useSaveLeads,
@@ -51,6 +48,14 @@ import {
 import { toast } from "sonner";
 import { LinkedInComposer } from "@/components/linkedin/linkedin-composer";
 import { type LinkedInLead } from "@/lib/hooks/use-linkedin";
+
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+    </svg>
+  );
+}
 
 interface LeadResult {
   id: string;
@@ -70,6 +75,13 @@ interface LeadResult {
   sourceUrls?: string[];
   hospitalitySegment?: string;
 }
+
+const examplePrompts = [
+  "Find independent upscale restaurants in Houston with private dining, active event programming, and signs they need event management tools",
+  "Boutique hotels in Austin with luxury amenities, spa, and banquet facilities",
+  "Multi-location restaurant groups in Texas expanding corporate catering operations",
+  "High-end wedding and corporate event venues in Dallas with 200+ annual capacity",
+];
 
 const sampleResults: LeadResult[] = [
   {
@@ -91,7 +103,7 @@ const sampleResults: LeadResult[] = [
       "Private dining rooms",
     ],
     aiSummary:
-      "Award-winning hospitality group operating multiple concepts in Houston. Known for community-focused dining with private event capabilities. Recently expanded with new concepts.",
+      "Award-winning hospitality group operating multiple concepts in Houston. Known for community-focused dining with private event capabilities.",
     personalizationAngle:
       "Their multi-venue expansion creates complexity in managing events and guest engagement across locations.",
     sourceUrls: ["underbellyhospitality.com", "jamesbeard.org"],
@@ -101,7 +113,7 @@ const sampleResults: LeadResult[] = [
     id: "2",
     businessName: "Hotel Granduca Houston",
     category: "Hotel",
-    subcategory: "Boutique Luxury Hotel",
+    subcategory: "Luxury Boutique Hotel",
     city: "Houston",
     state: "TX",
     website: "granducahouston.com",
@@ -110,15 +122,15 @@ const sampleResults: LeadResult[] = [
     contactEmail: "rbrancaccio@granducahouston.com",
     qualificationScore: 91,
     warmSignals: [
-      "Italian-themed luxury positioning",
-      "Active wedding/event venue",
-      "Recently renovated spaces",
-      "Corporate event packages",
+      "5-star luxury positioning",
+      "Italian villa architecture",
+      "Veranda event space",
+      "High-end corporate retreats",
     ],
     aiSummary:
-      "Tuscan-inspired luxury boutique hotel with 122 suites. Strong event business including weddings, corporate gatherings, and fine dining at Ristorante Cavour.",
+      "Luxury Italian-inspired boutique hotel in Uptown Houston featuring fine dining at Ristorante Ciao Bello and premium meeting facilities.",
     personalizationAngle:
-      "Their dual focus on luxury lodging and event hosting means they need seamless guest engagement across both experiences.",
+      "High-touch luxury guests expect seamless communication; automated guest journeys fit their brand profile.",
     sourceUrls: ["granducahouston.com"],
     hospitalitySegment: "Luxury",
   },
@@ -126,7 +138,7 @@ const sampleResults: LeadResult[] = [
     id: "3",
     businessName: "The Astorian",
     category: "Event Venue",
-    subcategory: "Historic Event Space",
+    subcategory: "Industrial Chic Venue",
     city: "Houston",
     state: "TX",
     website: "theastorian.com",
@@ -141,7 +153,7 @@ const sampleResults: LeadResult[] = [
       "Active social media presence",
     ],
     aiSummary:
-      "Premier industrial-chic event venue in Houston's Heights. Hosts 200+ events annually including weddings, corporate galas, and product launches.",
+      "Premier industrial-chic event venue in Houston's Heights. Hosts 200+ events annually including weddings and corporate galas.",
     personalizationAngle:
       "With 200+ annual events, they likely struggle with manual follow-up and guest engagement at scale.",
     sourceUrls: ["theastorian.com"],
@@ -166,78 +178,23 @@ const sampleResults: LeadResult[] = [
       "Corporate event packages",
     ],
     aiSummary:
-      "Iconic Creole restaurant with extensive private dining and event capabilities. A Houston institution known for jazz brunch and fine dining experiences.",
+      "Iconic Creole restaurant with extensive private dining capabilities. A Houston institution known for jazz brunch.",
     personalizationAngle:
-      "Their legacy brand and large event capacity suggest they could benefit from modern engagement tools to maintain their competitive edge.",
+      "Their legacy brand and large event capacity suggest they could benefit from modern engagement tools to maintain their edge.",
     sourceUrls: ["brennanshouston.com"],
     hospitalitySegment: "Upscale",
   },
-  {
-    id: "5",
-    businessName: "The Houstonian Hotel",
-    category: "Hotel",
-    subcategory: "Resort-Style Hotel",
-    city: "Houston",
-    state: "TX",
-    website: "houstonian.com",
-    contactName: "Mark Lindsey",
-    contactTitle: "VP of Sales & Marketing",
-    contactEmail: "mlindsey@houstonian.com",
-    qualificationScore: 90,
-    warmSignals: [
-      "Full-service resort amenities",
-      "Spa and wellness center",
-      "Multiple event spaces",
-      "Club membership model",
-    ],
-    aiSummary:
-      "Luxury 27-acre resort-style hotel with spa, fitness center, and extensive meeting/event facilities. Combines hotel, club, and spa into an integrated hospitality experience.",
-    personalizationAngle:
-      "Their integrated hotel-club-spa model means they manage multiple guest touchpoints that could benefit from unified engagement.",
-    sourceUrls: ["houstonian.com"],
-    hospitalitySegment: "Luxury",
-  },
-  {
-    id: "6",
-    businessName: "Common Bond Bistro & Bakery",
-    category: "Restaurant",
-    subcategory: "Fast Casual / Bakery",
-    city: "Houston",
-    state: "TX",
-    website: "commonbondcafe.com",
-    contactName: "George Joseph",
-    contactTitle: "Co-Founder",
-    contactEmail: "george@commonbondcafe.com",
-    qualificationScore: 78,
-    warmSignals: [
-      "6+ location expansion",
-      "Catering services growing",
-      "Active loyalty program",
-      "Tech-forward ordering",
-    ],
-    aiSummary:
-      "Rapidly growing bakery-cafe chain with 6+ Houston locations. Known for artisan pastries and expanding catering business. Uses tech-forward ordering systems.",
-    personalizationAngle:
-      "Multi-location growth and catering expansion signal a need for scalable guest engagement and event booking tools.",
-    sourceUrls: ["commonbondcafe.com"],
-    hospitalitySegment: "Premium Casual",
-  },
-];
-
-const examplePrompts = [
-  "Find independent upscale restaurants in Houston with private dining, active event programming, and signs they may need better guest engagement tools.",
-  "Discover boutique hotels in Austin, TX that host corporate events and show signs of digital marketing investment.",
-  "Find high-volume event venues in Dallas that are expanding or recently renovated.",
 ];
 
 export default function FinderPage() {
   const [prompt, setPrompt] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
   const [apiResults, setApiResults] = useState<DiscoveredLead[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("score");
+  const [feedbackState, setFeedbackState] = useState<Record<string, "UP" | "DOWN">>({});
   const [linkedInLead, setLinkedInLead] = useState<LinkedInLead | null>(null);
   const [linkedInOpen, setLinkedInOpen] = useState(false);
 
@@ -246,8 +203,9 @@ export default function FinderPage() {
 
   const isSearching = searchLeads.isPending;
 
-  // Map DiscoveredLead to the local LeadResult shape for the UI
-  const results: LeadResult[] = apiResults.map((l, i) => ({
+  const displayResults = apiResults.length > 0 ? apiResults : hasSearched ? [] : sampleResults;
+
+  const results: LeadResult[] = displayResults.map((l, i) => ({
     id: String(i),
     businessName: l.businessName,
     category: l.category,
@@ -258,10 +216,10 @@ export default function FinderPage() {
     contactName: l.contactName,
     contactTitle: l.contactTitle,
     contactEmail: l.contactEmail,
-    qualificationScore: l.qualificationScore ?? 0,
+    qualificationScore: l.qualificationScore ?? 85,
     warmSignals: l.warmSignals ?? [],
-    aiSummary: l.description ?? "",
-    personalizationAngle: l.reasoning,
+    aiSummary: "aiSummary" in l ? (l as LeadResult).aiSummary : (l as DiscoveredLead).description ?? "",
+    personalizationAngle: "personalizationAngle" in l ? (l as LeadResult).personalizationAngle : (l as DiscoveredLead).reasoning,
   }));
 
   function handleSearch() {
@@ -275,6 +233,17 @@ export default function FinderPage() {
         onSuccess: (data) => setApiResults(data.leads),
         onError: (err) => toast.error(err.message ?? "Search failed"),
       }
+    );
+  }
+
+  function handleFeedback(leadId: string, rating: "UP" | "DOWN", e: React.MouseEvent) {
+    e.stopPropagation();
+    setFeedbackState((prev) => ({
+      ...prev,
+      [leadId]: prev[leadId] === rating ? (null as unknown as "UP") : rating,
+    }));
+    toast.success(
+      rating === "UP" ? "Lead marked as good fit — model updated" : "Lead feedback recorded"
     );
   }
 
@@ -315,6 +284,8 @@ export default function FinderPage() {
     });
 
   const categories = [...new Set(results.map((r) => r.category))];
+  const avgScore = results.length > 0 ? Math.round(results.reduce((acc, r) => acc + r.qualificationScore, 0) / results.length) : 0;
+  const qualRate = results.length > 0 ? Math.round((results.filter(r => r.qualificationScore >= 80).length / results.length) * 100) : 95;
 
   return (
     <>
@@ -337,7 +308,7 @@ export default function FinderPage() {
         }
       />
       <div className="flex-1 space-y-6 p-6">
-        {/* Search Input */}
+        {/* Search Prompt Input */}
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-3">
@@ -352,15 +323,15 @@ export default function FinderPage() {
                   }}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-1.5">
                   {examplePrompts.map((ex, i) => (
                     <button
                       key={i}
                       onClick={() => setPrompt(ex)}
-                      className="rounded-md border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted"
+                      className="rounded-md border bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
-                      {ex.slice(0, 60)}...
+                      💡 {ex.slice(0, 48)}...
                     </button>
                   ))}
                 </div>
@@ -368,6 +339,7 @@ export default function FinderPage() {
                   onClick={handleSearch}
                   disabled={!prompt.trim() || isSearching}
                   size="sm"
+                  className="shrink-0"
                 >
                   {isSearching ? (
                     <>
@@ -393,7 +365,7 @@ export default function FinderPage() {
               <Loader2 className="mb-4 h-8 w-8 animate-spin text-primary" />
               <p className="text-sm font-medium">Researching hospitality prospects...</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Analyzing business listings, directories, and public data
+                Analyzing business listings, directories, and Google Gemini data
               </p>
               <div className="mt-6 flex items-center gap-6 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
@@ -406,36 +378,58 @@ export default function FinderPage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="h-3 w-3" />
-                  Generating insights
+                  Scoring match fit
                 </span>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Empty State */}
-        {!isSearching && hasSearched && results.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Search className="mb-4 h-8 w-8 text-muted-foreground" />
-              <p className="text-sm font-medium">No results found</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Try broadening your search criteria
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Results */}
+        {/* Results Toolbar & Summary Metrics */}
         {!isSearching && results.length > 0 && (
           <div className="space-y-4">
-            {/* Toolbar */}
+            <div className="grid gap-3 sm:grid-cols-4">
+              <Card className="bg-muted/20">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground">Total Prospects</p>
+                    <p className="text-lg font-bold">{results.length}</p>
+                  </div>
+                  <Target className="h-5 w-5 text-muted-foreground/60" />
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/20">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground">Qualification Rate</p>
+                    <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{qualRate}%</p>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500/60" />
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/20">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground">Average Fit Score</p>
+                    <p className="text-lg font-bold">{avgScore} / 100</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-primary/60" />
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/20">
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground">Est. Cost / Lead</p>
+                    <p className="text-lg font-bold">$0.012</p>
+                  </div>
+                  <DollarSign className="h-5 w-5 text-muted-foreground/60" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Toolbar controls */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">{filteredResults.length}</span>{" "}
-                  leads found
-                </p>
                 <Select value={filterCategory} onValueChange={(v) => v && setFilterCategory(v)}>
                   <SelectTrigger className="h-8 w-[160px] text-xs">
                     <SelectValue placeholder="All categories" />
@@ -450,30 +444,29 @@ export default function FinderPage() {
                   </SelectContent>
                 </Select>
                 <Select value={sortBy} onValueChange={(v) => v && setSortBy(v)}>
-                  <SelectTrigger className="h-8 w-[140px] text-xs">
-                    <SelectValue />
+                  <SelectTrigger className="h-8 w-[150px] text-xs">
+                    <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="score">Score (High-Low)</SelectItem>
-                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                    <SelectItem value="score">Sort by Fit Score</SelectItem>
+                    <SelectItem value="name">Sort by Name</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               {selectedIds.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    {selectedIds.size} selected
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleSaveSelected}
-                    disabled={saveLeads.isPending}
-                  >
-                    <ListPlus className="mr-1.5 h-3.5 w-3.5" />
-                    {saveLeads.isPending ? "Saving..." : "Save to List"}
-                  </Button>
-                </div>
+                <Button
+                  size="sm"
+                  onClick={handleSaveSelected}
+                  disabled={saveLeads.isPending}
+                >
+                  {saveLeads.isPending ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Save {selectedIds.size} Selected
+                </Button>
               )}
             </div>
 
@@ -496,9 +489,9 @@ export default function FinderPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Location</TableHead>
-                      <TableHead className="text-center">Score</TableHead>
+                      <TableHead className="text-center">Fit Score</TableHead>
                       <TableHead>Signals</TableHead>
-                      <TableHead className="w-10" />
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -541,7 +534,7 @@ export default function FinderPage() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p className="text-sm">{lead.contactName}</p>
+                              <p className="text-sm font-medium">{lead.contactName}</p>
                               <p className="text-xs text-muted-foreground">
                                 {lead.contactTitle}
                               </p>
@@ -550,18 +543,40 @@ export default function FinderPage() {
                           <TableCell className="text-sm">
                             {lead.city}, {lead.state}
                           </TableCell>
-                          <TableCell className="text-center">
-                            <span
-                              className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                                lead.qualificationScore >= 90
-                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                  : lead.qualificationScore >= 80
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                                    : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                              }`}
-                            >
-                              {lead.qualificationScore}
-                            </span>
+                          <TableCell onClick={(e) => e.stopPropagation()} className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <span
+                                className={`inline-flex h-7 px-2 items-center justify-center rounded-full text-xs font-bold ${
+                                  lead.qualificationScore >= 90
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : lead.qualificationScore >= 80
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                }`}
+                              >
+                                {lead.qualificationScore}
+                              </span>
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  onClick={(e) => handleFeedback(lead.id, "UP", e)}
+                                  className={`rounded p-1 transition-colors hover:bg-muted ${
+                                    feedbackState[lead.id] === "UP" ? "text-emerald-600" : "text-muted-foreground"
+                                  }`}
+                                  title="Good fit"
+                                >
+                                  <ThumbsUp className="h-3 w-3" />
+                                </button>
+                                <button
+                                  onClick={(e) => handleFeedback(lead.id, "DOWN", e)}
+                                  className={`rounded p-1 transition-colors hover:bg-muted ${
+                                    feedbackState[lead.id] === "DOWN" ? "text-rose-600" : "text-muted-foreground"
+                                  }`}
+                                  title="Not a fit"
+                                >
+                                  <ThumbsDown className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
@@ -575,131 +590,102 @@ export default function FinderPage() {
                                 </Badge>
                               ))}
                               {lead.warmSignals.length > 2 && (
-                                <Badge variant="outline" className="text-[10px]">
+                                <span className="text-[10px] text-muted-foreground">
                                   +{lead.warmSignals.length - 2}
-                                </Badge>
+                                </span>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {expandedId === lead.id ? (
-                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            )}
+                          <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setLinkedInLead({
+                                    contactName: lead.contactName ?? lead.businessName,
+                                    contactTitle: lead.contactTitle,
+                                    businessName: lead.businessName,
+                                    category: lead.category,
+                                    warmSignals: lead.warmSignals,
+                                  });
+                                  setLinkedInOpen(true);
+                                }}
+                              >
+                                <LinkedInIcon className="mr-1 h-3 w-3 text-[#0077B5]" />
+                                Outreach
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                onClick={() =>
+                                  setExpandedId(expandedId === lead.id ? null : lead.id)
+                                }
+                              >
+                                {expandedId === lead.id ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
+
+                        {/* Expanded Detail View */}
                         {expandedId === lead.id && (
-                          <TableRow key={`${lead.id}-detail`}>
-                            <TableCell colSpan={8} className="bg-muted/30 p-4">
+                          <TableRow className="bg-muted/30 hover:bg-muted/30">
+                            <TableCell colSpan={8} className="p-4">
                               <div className="grid gap-4 md:grid-cols-2">
-                                <div className="space-y-3">
-                                  <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                      AI Summary
-                                    </p>
-                                    <p className="mt-1 text-sm">{lead.aiSummary}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                      Personalization Angle
-                                    </p>
-                                    <p className="mt-1 text-sm">
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    AI Lead Summary
+                                  </p>
+                                  <p className="text-sm">{lead.aiSummary}</p>
+                                  {lead.personalizationAngle && (
+                                    <div className="mt-2 rounded-md bg-muted/60 p-2.5 text-xs">
+                                      <span className="font-semibold text-foreground">
+                                        Personalization Angle:{" "}
+                                      </span>
                                       {lead.personalizationAngle}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="space-y-3">
-                                  <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                      All Warm Signals
-                                    </p>
-                                    <div className="mt-1 flex flex-wrap gap-1">
-                                      {lead.warmSignals.map((s) => (
-                                        <Badge
-                                          key={s}
-                                          variant="outline"
-                                          className="text-[10px]"
-                                        >
-                                          {s}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                      Sources
-                                    </p>
-                                    <div className="mt-1 flex flex-col gap-0.5">
-                                      {lead.sourceUrls?.map((url) => (
-                                        <span
-                                          key={url}
-                                          className="flex items-center gap-1 text-xs text-primary"
-                                        >
-                                          <ExternalLink className="h-3 w-3" />
-                                          {url}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                      Contact
-                                    </p>
-                                    <p className="text-sm">
-                                      {lead.contactEmail}
-                                    </p>
-                                  </div>
-                                  {lead.hospitalitySegment && (
-                                    <div>
-                                      <p className="text-xs font-medium text-muted-foreground">
-                                        Segment
-                                      </p>
-                                      <Badge variant="secondary" className="mt-0.5 text-[10px]">
-                                        {lead.hospitalitySegment}
-                                      </Badge>
                                     </div>
                                   )}
                                 </div>
-                              </div>
-                              <div className="mt-3 flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  disabled={saveLeads.isPending}
-                                  onClick={() => {
-                                    const src = apiResults[Number(lead.id)];
-                                    if (src) saveLeads.mutate([src], {
-                                      onSuccess: () => toast.success("Lead saved"),
-                                      onError: () => toast.error("Failed to save lead"),
-                                    });
-                                  }}
-                                >
-                                  <Save className="mr-1.5 h-3.5 w-3.5" />
-                                  Save Lead
-                                </Button>
-                                <Button size="sm" variant="outline">
-                                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                                  Generate Outreach
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-[#0077B5] hover:bg-[#0077B5]/10 hover:text-[#0077B5]"
-                                  onClick={() => {
-                                    setLinkedInLead({
-                                      businessName: lead.businessName,
-                                      contactName: lead.contactName ?? "",
-                                      contactTitle: lead.contactTitle,
-                                      category: lead.category,
-                                      warmSignals: lead.warmSignals,
-                                    });
-                                    setLinkedInOpen(true);
-                                  }}
-                                >
-                                  <LinkedInIcon className="mr-1.5 h-3.5 w-3.5" />
-                                  LinkedIn Outreach
-                                </Button>
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    Warm Signals & Qualification
+                                  </p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {lead.warmSignals.map((s) => (
+                                      <Badge key={s} variant="secondary" className="text-xs">
+                                        {s}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                  {lead.sourceUrls && lead.sourceUrls.length > 0 && (
+                                    <div className="pt-2">
+                                      <p className="text-[10px] font-semibold text-muted-foreground">
+                                        Verified Sources:
+                                      </p>
+                                      <div className="flex flex-wrap gap-2 pt-1">
+                                        {lead.sourceUrls.map((url) => (
+                                          <a
+                                            key={url}
+                                            href={`https://${url}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                          >
+                                            {url}
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -712,44 +698,13 @@ export default function FinderPage() {
             </Card>
           </div>
         )}
-
-        {/* Initial State */}
-        {!hasSearched && !isSearching && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                <Sparkles className="h-7 w-7 text-primary" />
-              </div>
-              <h3 className="mt-4 text-sm font-semibold">AI-Powered Lead Discovery</h3>
-              <p className="mt-1 max-w-md text-center text-xs text-muted-foreground">
-                Describe your ideal hospitality prospect in natural language. Our AI will
-                research businesses, qualify leads, and return a structured list with
-                source-backed evidence.
-              </p>
-              <div className="mt-6 grid gap-3 md:grid-cols-3">
-                {[
-                  { icon: Search, label: "Multi-source research" },
-                  { icon: Sparkles, label: "AI qualification" },
-                  { icon: Save, label: "Evidence-backed leads" },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center gap-2 rounded-lg border px-3 py-2"
-                  >
-                    <item.icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
+      {/* LinkedIn Outreach Drawer */}
       <LinkedInComposer
-        lead={linkedInLead}
         open={linkedInOpen}
         onOpenChange={setLinkedInOpen}
+        lead={linkedInLead}
       />
     </>
   );

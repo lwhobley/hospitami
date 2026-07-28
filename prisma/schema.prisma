@@ -195,6 +195,7 @@ model Lead {
   contactId            String?    @map("contact_id")
   status               LeadStatus @default(NEW)
   qualificationScore   Int?       @map("qualification_score")
+  fitFeedback          String?    @map("fit_feedback")
   warmSignals          Json?      @map("warm_signals")
   aiSummary            String?    @map("ai_summary")
   personalizationAngle String?    @map("personalization_angle")
