@@ -8,47 +8,59 @@ export interface WorkspaceContext {
   role: Role;
 }
 
-// Resolves the authenticated user's workspace from Supabase session.
-// Falls back to DEMO_WORKSPACE_ID env var for local dev without auth.
+// Resolves the workspace context.
+// Defaults to the primary workspace for single-user internal tool mode.
 export async function getWorkspaceContext(
   requestedWorkspaceId?: string
 ): Promise<WorkspaceContext | null> {
-  // Dev fallback: if auth is disabled, use the demo workspace
-  const demoWorkspaceId = process.env.DEMO_WORKSPACE_ID;
-  if (process.env.SUPABASE_AUTH_DISABLED === "true" && demoWorkspaceId) {
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: demoWorkspaceId },
-    });
-    if (!workspace) return null;
-    return {
-      user: { id: "demo", email: "demo@hospitami.com", name: "Demo User" },
-      workspace,
-      role: "ADMIN",
-    };
+  // 1. Try resolving via Supabase Session if logged in
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user?.email) {
+      const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
+      if (dbUser) {
+        const member = await prisma.workspaceMember.findFirst({
+          where: {
+            userId: dbUser.id,
+            ...(requestedWorkspaceId ? { workspaceId: requestedWorkspaceId } : {}),
+          },
+          include: { workspace: true },
+          orderBy: { createdAt: "asc" },
+        });
+
+        if (member) {
+          return {
+            user: { id: dbUser.id, email: dbUser.email, name: dbUser.name },
+            workspace: member.workspace,
+            role: member.role,
+          };
+        }
+      }
+    }
+  } catch {
+    // Session check skipped for standalone mode
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return null;
+  // 2. Default workspace resolution for internal tool mode
+  const workspace = requestedWorkspaceId
+    ? await prisma.workspace.findUnique({ where: { id: requestedWorkspaceId } })
+    : await prisma.workspace.findFirst({ orderBy: { createdAt: "asc" } });
 
-  const dbUser = await prisma.user.findUnique({ where: { email: user.email } });
-  if (!dbUser) return null;
+  if (!workspace) return null;
 
-  const member = await prisma.workspaceMember.findFirst({
-    where: {
-      userId: dbUser.id,
-      ...(requestedWorkspaceId ? { workspaceId: requestedWorkspaceId } : {}),
-    },
-    include: { workspace: true },
-    orderBy: { createdAt: "asc" },
-  });
+  const defaultUser = (await prisma.user.findFirst({ orderBy: { createdAt: "asc" } })) || {
+    id: "owner",
+    email: "outreach@venuewrangler.com",
+    name: "VenueWrangler Owner",
+  };
 
-  if (!member) return null;
   return {
-    user: { id: dbUser.id, email: dbUser.email, name: dbUser.name },
-    workspace: member.workspace,
-    role: member.role,
+    user: { id: defaultUser.id, email: defaultUser.email, name: defaultUser.name },
+    workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
+    role: "ADMIN",
   };
 }
