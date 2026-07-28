@@ -21,13 +21,13 @@ export interface GeminiRunResult {
   model: string;
 }
 
-const FALLBACK_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+const FALLBACK_MODELS = ["gemini-2.5-pro", "gemini-1.5-pro", "gemini-1.5-flash"];
 
 export async function generateWithGemini(
   prompt: string,
   options?: { model?: string; systemInstruction?: string }
 ): Promise<GeminiRunResult> {
-  const primaryModel = options?.model ?? process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+  const primaryModel = options?.model ?? process.env.GEMINI_MODEL ?? "gemini-2.5-pro";
   const candidateModels = [primaryModel, ...FALLBACK_MODELS.filter((m) => m !== primaryModel)];
 
   let lastError: Error | null = null;
