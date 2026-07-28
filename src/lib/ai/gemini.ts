@@ -22,17 +22,20 @@ export interface GeminiRunResult {
 }
 
 const CANDIDATE_MODELS = [
+  "gemini-3.1-pro-preview",
+  "gemini-3-pro-preview",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
   "gemini-2.0-flash",
-  "gemini-2.0-flash-exp",
-  "gemini-1.5-pro-latest",
-  "gemini-1.5-flash-latest",
+  "gemini-pro-latest",
+  "gemini-flash-latest",
 ];
 
 export async function generateWithGemini(
   prompt: string,
   options?: { model?: string; systemInstruction?: string }
 ): Promise<GeminiRunResult> {
-  const primaryModel = options?.model ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+  const primaryModel = options?.model ?? process.env.GEMINI_MODEL ?? "gemini-3.1-pro-preview";
   const candidateModels = [
     primaryModel,
     ...CANDIDATE_MODELS.filter((m) => m !== primaryModel),
