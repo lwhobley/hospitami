@@ -1,3 +1,5 @@
+import { generateWithGemini } from "./gemini";
+
 export interface KimiRunResult {
   text: string;
   model: string;
@@ -7,34 +9,46 @@ export interface KimiRunResult {
 async function callKimi(
   prompt: string,
   systemPrompt?: string,
-  model = "kimi"
+  model = "moonshot-v1-8k"
 ): Promise<KimiRunResult> {
   const apiKey = process.env.KIMI_API_KEY;
-  if (!apiKey) throw new Error("KIMI_API_KEY is not set");
 
-  const messages = [
-    ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
-    { role: "user" as const, content: prompt },
-  ];
+  if (apiKey && apiKey.startsWith("sk-")) {
+    try {
+      const messages = [
+        ...(systemPrompt ? [{ role: "system" as const, content: systemPrompt }] : []),
+        { role: "user" as const, content: prompt },
+      ];
 
-  const response = await fetch("https://api.moonshot.cn/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ model, messages, temperature: 0.7 }),
-  });
+      const response = await fetch("https://api.moonshot.cn/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ model, messages, temperature: 0.7 }),
+      });
 
-  if (!response.ok) {
-    throw new Error(`Kimi API error: ${response.status} ${response.statusText}`);
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          text: data.choices[0].message.content,
+          model,
+          tokenCount: data.usage?.total_tokens,
+        };
+      }
+      console.warn(`Moonshot Kimi API returned ${response.status}. Falling back to Gemini...`);
+    } catch (err) {
+      console.warn("Moonshot Kimi API request failed. Falling back to Gemini...", err);
+    }
   }
 
-  const data = await response.json();
+  // Fallback to Gemini AI if Kimi API is unauthorized or unavailable
+  const geminiRes = await generateWithGemini(prompt, { systemInstruction: systemPrompt });
   return {
-    text: data.choices[0].message.content,
-    model,
-    tokenCount: data.usage?.total_tokens,
+    text: geminiRes.text,
+    model: `gemini-fallback (${geminiRes.model})`,
+    tokenCount: geminiRes.tokenCount,
   };
 }
 
