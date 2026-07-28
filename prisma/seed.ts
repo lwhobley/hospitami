@@ -339,8 +339,8 @@ async function main() {
   const sender1 = await prisma.senderAccount.create({
     data: {
       workspaceId: workspace.id,
-      email: "sarah@hospitami.com",
-      name: "Sarah Mitchell",
+      email: "outreach@venuewrangler.com",
+      name: "VenueWrangler Outreach",
       status: SenderStatus.ACTIVE,
       dailyLimit: 50,
       sentToday: 23,
@@ -351,8 +351,8 @@ async function main() {
   await prisma.senderAccount.create({
     data: {
       workspaceId: workspace.id,
-      email: "mike@hospitami.com",
-      name: "Mike Thompson",
+      email: "team@venuewrangler.com",
+      name: "VenueWrangler Team",
       status: SenderStatus.ACTIVE,
       dailyLimit: 40,
       sentToday: 18,
@@ -363,11 +363,11 @@ async function main() {
   await prisma.senderDomain.create({
     data: {
       workspaceId: workspace.id,
-      domain: "hospitami.com",
+      domain: "venuewrangler.com",
       verified: true,
-      spfRecord: "v=spf1 include:_spf.hospitami.com ~all",
+      spfRecord: "v=spf1 include:_spf.resend.com ~all",
       dkimRecord: "v=DKIM1; k=rsa; p=MIIBIjANBg...",
-      dmarcRecord: "v=DMARC1; p=quarantine; rua=mailto:dmarc@hospitami.com",
+      dmarcRecord: "v=DMARC1; p=quarantine; rua=mailto:dmarc@venuewrangler.com",
     },
   });
 
@@ -407,8 +407,8 @@ async function main() {
       {
         threadId: thread1.id,
         direction: MessageDirection.OUTBOUND,
-        fromEmail: "sarah@hospitami.com",
-        fromName: "Sarah Mitchell",
+        fromEmail: "outreach@venuewrangler.com",
+        fromName: "VenueWrangler Outreach",
         toEmail: "chris@underbellyhospitality.com",
         subject: "Helping Underbelly Hospitality elevate guest experiences",
         body: "Hi Chris, I noticed Underbelly Hospitality's growing event programming and multi-location expansion...",
@@ -419,7 +419,7 @@ async function main() {
         direction: MessageDirection.INBOUND,
         fromEmail: "chris@underbellyhospitality.com",
         fromName: "Chris Shepherd",
-        toEmail: "sarah@hospitami.com",
+        toEmail: "outreach@venuewrangler.com",
         subject: "Re: Helping Underbelly Hospitality elevate guest experiences",
         body: "Thanks for reaching out! We've been looking into better tools for our events. Can you share more about what you offer?",
         sentAt: new Date("2024-07-26T14:30:00Z"),
