@@ -33,14 +33,15 @@ export function useInbox(unreadOnly = false) {
   return useQuery<InboxThread[]>({
     queryKey: ["inbox", workspaceId, unreadOnly],
     queryFn: async () => {
-      const params = new URLSearchParams({ workspaceId: workspaceId! });
+      const params = new URLSearchParams();
+      if (workspaceId) params.set("workspaceId", workspaceId);
       if (unreadOnly) params.set("unreadOnly", "true");
-      const res = await fetch(`/api/inbox?${params}`);
+      const res = await fetch(`/api/inbox${params.toString() ? `?${params.toString()}` : ""}`);
       if (!res.ok) throw new Error("Failed to load inbox");
-      return res.json() as Promise<InboxThread[]>;
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.threads ?? [];
     },
-    enabled: !!workspaceId,
-    refetchInterval: 60 * 1000, // poll every minute
+    refetchInterval: 60 * 1000,
   });
 }
 

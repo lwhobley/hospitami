@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getWorkspaceContext } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
-  const workspaceId = request.nextUrl.searchParams.get("workspaceId");
-  const unreadOnly = request.nextUrl.searchParams.get("unreadOnly") === "true";
+  const queryWs = request.nextUrl.searchParams.get("workspaceId") ?? undefined;
+  const ctx = await getWorkspaceContext(queryWs);
+  if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!workspaceId) {
-    return NextResponse.json({ error: "workspaceId is required" }, { status: 400 });
-  }
+  const workspaceId = ctx.workspace.id;
+  const unreadOnly = request.nextUrl.searchParams.get("unreadOnly") === "true";
 
   const threads = await prisma.inboxThread.findMany({
     where: {
